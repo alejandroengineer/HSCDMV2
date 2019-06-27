@@ -2,7 +2,6 @@ import numpy as np
 import pyglet
 from pyglet.gl import *
 
-window = pyglet.window.Window(256*2, 256*2)
 
 img = np.random.rand(64*64)*255
 imgData = (GLubyte * img.size)(*img.astype('uint8'))
@@ -12,15 +11,18 @@ def update(dt):
     global pimg
     img = np.random.rand(64*64)*255
     imgData = (GLubyte * img.size)(*img.astype('uint8'))
-    pimg = pyglet.image.ImageData(64, 64, 'L', imgData)
+    glEnable(GL_TEXTURE_2D)
+    pimg = pyglet.image.ImageData(64, 64, 'L', imgData).get_texture()
+    gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+    pimg.scale = 1
+    pimg.width = 512
+    pimg.height = 512
 
-pyglet.clock.schedule_interval(update, 1/6.0)
+pyglet.clock.schedule_interval(update, 1/30.0)
 
 @window.event
 def on_draw():
     window.clear()
-    pimg.width = 512
-    pimg.height = 512
     pimg.blit(0, 0)
 
 
