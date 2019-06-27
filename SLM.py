@@ -17,6 +17,12 @@ class SLM(pyglet.window.Window):
         self.w = w
         self.h = h
     
+    def set_location_center(self, x, y, w, h): #selects, in pixel space, this location and size of the image
+        self.x = x - (w/2)
+        self.y = y - (h/2)
+        self.w = w
+        self.h = h
+    
     def set_array(self, array):     #sets the array which will be drawn (numpy array passed as a 2d array)
                                     #valid array values are from 0 to 1
         width = np.size(array, 0)
@@ -32,17 +38,3 @@ class SLM(pyglet.window.Window):
         self.texture.width = self.w
         self.texture.height = self.h
         self.texture.blit(self.x, self.y)
-
-slm = SLM(1)
-slm2 = SLM(0)
-
-def update(dt):
-    img = np.random.rand(64, 64)
-    slm.set_location(0, slm.screen_height - 512, 512, 512)
-    slm.set_array(img)
-    slm2.set_location(0, 0, 512, 512)
-    slm2.set_array(img)
-
-pyglet.clock.schedule_interval(update, 1/30.0)
-
-pyglet.app.run();
