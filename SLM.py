@@ -10,6 +10,7 @@ class SLM(pyglet.window.Window):
         self.screen_width = screen.width
         self.screen_height = screen.height
         self.set_location(0, 0, self.screen_width, self.screen_height)
+        self.set_array(np.zeros((64, 64)))
 
     def set_location(self, x, y, w, h): #selects, in pixel space, this location and size of the image
         self.x = x
