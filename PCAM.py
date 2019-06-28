@@ -14,13 +14,9 @@ class PCAM:
         self.h = self.ia.device.node_map.Height
 
     def __del__(self):
-        print('heyy')
         self.buffer.queue()
-        print('hey')
         self.ia.stop_image_acquisition()
-        print('hey2')
         self.ia.destroy()
-        print('hey3')
         self.H.reset()
     
     def set_pixel_format(self, format):
