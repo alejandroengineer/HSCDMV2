@@ -1,12 +1,16 @@
 import numpy as np
 import pyglet
 from pyglet.gl import *
+from pyglet.gl import gl
+
+def list_screens():
+    return pyglet.canvas.get_display().get_screens()
 
 class SLM(pyglet.window.Window):
-    def __init__(self, monitorID):  #monitorID selects the monitor to use as the SLM output
-        self.monitorID = monitorID
-        screen = pyglet.canvas.get_display().get_screens()[monitorID]
-        super(SLM, self).__init__(screen=screen, fullscreen = True)
+    def __init__(self, monitor_id):  #monitorID selects the monitor to use as the SLM output
+        self.monitor_id = monitor_id
+        screen = pyglet.canvas.get_display().get_screens()[monitor_id]
+        super(SLM, self).__init__(screen=screen, fullscreen = False)
         self.screen_width = screen.width
         self.screen_height = screen.height
         self.set_location(0, 0, self.screen_width, self.screen_height)

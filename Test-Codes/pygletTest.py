@@ -1,7 +1,9 @@
 import numpy as np
 import pyglet
 from pyglet.gl import *
+from pyglet.gl import gl
 
+window = pyglet.window.Window()
 
 img = np.random.rand(64*64)*255
 imgData = (GLubyte * img.size)(*img.astype('uint8'))
