@@ -2,6 +2,7 @@ import numpy as np
 import pyglet
 from pyglet.gl import *
 from pyglet.gl import gl
+from pyshaders import from_files_names, ShaderCompilationError 
 
 def list_screens():
     return pyglet.canvas.get_display().get_screens()
@@ -15,6 +16,14 @@ class SLM(pyglet.window.Window):
         self.screen_height = screen.height
         self.set_location(0, 0, self.screen_width, self.screen_height)
         self.set_array(np.zeros((64, 64)))
+        self.shader = None
+
+    def add_shader(self, vert, frag):
+        try:
+            self.shader = from_files_names(vert, frag)
+        except ShaderCompilationError as e:
+            print(e.logs)
+            self.shader = None
 
     def set_location(self, x, y, w, h): #selects, in pixel space, this location and size of the image
         self.x = x
@@ -42,4 +51,9 @@ class SLM(pyglet.window.Window):
         self.clear()
         self.texture.width = self.w
         self.texture.height = self.h
-        self.texture.blit(self.x, self.y)
+        if self.shader == None:
+            self.texture.blit(self.x, self.y)
+        else:
+            self.shader.use()
+            gl.glActiveTexture(GL_TEXTURE0)
+            self.shader.clear()
