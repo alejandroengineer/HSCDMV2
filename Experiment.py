@@ -7,7 +7,7 @@ import MathUtils as mu
 
 slm = SLM.SLM(1)
 
-slm.add_shader("vertex.glsl", "blazed.glsl")
+slm.enable_blazed()
 
 fps_ = 60
 
