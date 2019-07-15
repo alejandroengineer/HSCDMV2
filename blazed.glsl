@@ -6,17 +6,18 @@
 //this shader automatically generates a blazed gratting for displaying both amplitude and phase modulated images
 
 uniform sampler2D tex;  //field we want to generate (red - real, greaan - imaginary, blue = nothing, alpha - nothing)
+
 uniform sampler1D Alut; //lookup table for inverse sinc (used for modulating the amplitude)
 
-uniform sampler2D calA, celB;   //calirbation polynomial coefficients stored in the color information of these two textures
+uniform sampler2D calA, calB;   //calirbation polynomial coefficients stored in the color information of these two textures
 
 uniform vec2 dir;   //direction vector of the grating (1.0/nx, 1.0/ny where nx and ny are ideally coprime)
                     //It is the k momentum vector multiplied by the pixel dimensions
 
 uniform vec2 screen_size;   //the size of the screen is needed for the calibration texture
 
-float phaseCal(float in, vec4 A, vec4 B)    {   //converts between phase and pixel values using a calibration polynomial
-    return A.x + in*(A.y + in*(A.z + in*(A.w + in*(B.x + in*(B.y + in*(B.z + in*B.w))))));  //the polynomial is evaluated using Horner's method
+float phaseCal(float phi, vec4 A, vec4 B)    {   //converts between phase and pixel values using a calibration polynomial
+    return A.x + phi*(A.y + phi*(A.z + phi*(A.w + phi*(B.x + phi*(B.y + phi*(B.z + phi*B.w))))));  //the polynomial is evaluated using Horner's method
 }
 
 void main() {
@@ -38,5 +39,5 @@ void main() {
     vec4 A = texture2D(calA, screen_loc);   //calibration coeffs are obtained from the two calibration textures
     vec4 B = texture2D(calB, screen_loc);
 
-    gl_FragColor = vec4(vec3(phaseCal(phase, A, B)), 1);    //display the pixel
+    gl_FragColor = vec4(vec3(phase), 1);    //display the pixel
 }

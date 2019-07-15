@@ -5,7 +5,7 @@ import PCAM
 import time
 import MathUtils as mu
 
-slm = SLM.SLM(1)
+slm = SLM.SLM(0)
 
 slm.enable_blazed()
 
@@ -25,7 +25,10 @@ def update(dt):
         print(fps_)
     num_of_frames = num_of_frames + 1
     pmillis = millis
-    img = np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])
+    x = np.linspace(0, 1, 160)
+    y = np.linspace(0, 1, 16)
+    img, yy = np.meshgrid(x, y)
+    #img = np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])#mu.LG(1024, 1024)#
     slm.set_location_center(slm.screen_width/2, slm.screen_height/2, 1024, 1024)
     slm.set_array(img)
 

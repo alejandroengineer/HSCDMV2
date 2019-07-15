@@ -7,7 +7,7 @@ from pyshaders import from_files_names, ShaderCompilationError
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-def inverse_sinc(y):
+def inverse_sinc(y):    #calculates the inverse of sinc through the use of newtons method
     if y == 1:
         return 0
 
@@ -23,13 +23,13 @@ def inverse_sinc(y):
 def list_screens():
     return pyglet.canvas.get_display().get_screens()
 
-def gl_enable_filtering():
+def gl_enable_filtering():  #useful function for enableing filtering and formating the bound texture
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 
-def gl_disable_filtering():
+def gl_disable_filtering(): #useful function for disableing filtering of the image. This also formats the currenly bound texture
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
@@ -46,8 +46,8 @@ class SLM(pyglet.window.Window):
         self.set_location(0, 0, self.screen_width, self.screen_height)
 
         self.data = np.zeros((64, 64))
+        glEnable(GL_TEXTURE_2D)
         self.texture = glGenTextures(1)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glBindTexture(GL_TEXTURE_2D, self.texture)
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RED, GL_FLOAT, self.data)
@@ -56,6 +56,7 @@ class SLM(pyglet.window.Window):
 
         self.sinc_lut = 1 - invSinc(np.linspace(0, 1, 255))
 
+        glEnable(GL_TEXTURE_1D)
         self.GL_sinc_lut = glGenTextures(1)
         glBindTexture(GL_TEXTURE_1D, self.GL_sinc_lut)
         gl_enable_filtering()
@@ -66,13 +67,13 @@ class SLM(pyglet.window.Window):
         self.GLcalA = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.GLcalA)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 0), np.size(self.calA, 1), 0, GL_RGBA, GL_FLOAT, self.calA)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.calA)
 
         self.calB = np.zeros((64, 64, 4))
         self.GLcalB = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.GLcalB)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 0), np.size(self.calB, 1), 0, GL_RGBA, GL_FLOAT, self.calB)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.calB)
 
 
     def add_shader(self, vert, frag):
@@ -80,7 +81,7 @@ class SLM(pyglet.window.Window):
             self.shader = from_files_names(vert, frag)
             print(self.shader.uniforms)
             self.texLoc = glGetUniformLocation(self.shader.pid, 'tex')
-            self.lutLoc = glGetUniformLocation(self.shader.pid, 'lut')
+            self.lutLoc = glGetUniformLocation(self.shader.pid, 'Alut')
             self.calALoc = glGetUniformLocation(self.shader.pid, 'calA')
             self.calBLoc = glGetUniformLocation(self.shader.pid, 'calB')
             self.dirLoc = glGetUniformLocation(self.shader.pid, 'dir')
@@ -90,9 +91,9 @@ class SLM(pyglet.window.Window):
             glUniform1i(self.lutLoc, 1)
             glUniform1i(self.calALoc, 2)
             glUniform1i(self.calBLoc, 3)
-            self.dir_vector = (1.0/13.0, 1.0/19.0)
-            glUniform2f(self.dirLoc, self.dir_vector)
-            glUniform2f(self.ssLoc, (self.screen_width, self.screen_height))
+            self.dir_vector = (2.0*np.pi/13.0, 2.0*np.pi/19.0)
+            glUniform2f(self.dirLoc, self.dir_vector[0], self.dir_vector[1])
+            glUniform2f(self.ssLoc, self.screen_width, self.screen_height)
             self.shader.clear()
         except ShaderCompilationError as e:
             print(e.logs)
@@ -100,7 +101,16 @@ class SLM(pyglet.window.Window):
 
     def load_calibration(self, file_name):  #load a calibration file
         calibration = sp.loadmat(file_name)
-        self.cal = calibration['cal']
+        self.calA = calibration['calA']
+        self.calB = calibration['calB']
+
+        glBindTexture(GL_TEXTURE_2D, self.GLcalA)
+        gl_enable_filtering()
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.calA)
+
+        glBindTexture(GL_TEXTURE_2D, self.GLcalB)
+        gl_enable_filtering()
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.calB)
 
     def set_location(self, x, y, w, h): #selects, in pixel space, this location and size of the image
         self.x = x
@@ -116,7 +126,7 @@ class SLM(pyglet.window.Window):
 
     def set_dir(self, dx, dy):
         self.dir_vector = (dx, dy);
-        glUniform2f(self.dirLoc, self.dir_vector)
+        glUniform2f(self.dirLoc, self.dir_vector[0], self.dir_vector[1])
     
     def set_array(self, array):     #sets the array which will be drawn (numpy array passed as a 2d array)
                                     #valid array values are from 0 to 1
@@ -126,13 +136,13 @@ class SLM(pyglet.window.Window):
         if self.shader == None:     #if no shader is used, we are in basic display mode. Only real valued float arrays are accepted
             self.data = array
             self.disable_filter()
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RED, GL_FLOAT, self.data)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, np.size(self.data, 1), np.size(self.data, 0), 0, GL_RED, GL_FLOAT, self.data)
         else:                       #if we are using a shader, we must load the array as a complex floating point texture
-            self.dara = np.zeros((width, height, 2), 'float')
+            self.data = np.zeros((width, height, 2), 'float')
             self.data[..., 0] = np.real(array)
             self.data[..., 1] = np.imag(array)
             self.enable_filter()
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RG, GL_FLOAT, self.data)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, np.size(self.data, 1), np.size(self.data, 0), 0, GL_RG, GL_FLOAT, self.data)
 
     def enable_filter(self):
         glBindTexture(GL_TEXTURE_2D, self.texture)
@@ -152,22 +162,26 @@ class SLM(pyglet.window.Window):
         self.clear()
         if self.shader == None:
             glEnable(GL_TEXTURE_2D)
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, self.texture);
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_2D, self.texture)
         else:
             self.shader.use()
+
+            glEnable(GL_TEXTURE_2D)
             
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, self.texture);
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_2D, self.texture)
 
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_1D, self.GLlut);
+            glEnable(GL_TEXTURE_1D)
 
-            glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, self.GLcalA);
+            glActiveTexture(GL_TEXTURE1)
+            glBindTexture(GL_TEXTURE_1D, self.GL_sinc_lut)
 
-            glActiveTexture(GL_TEXTURE3);
-            glBindTexture(GL_TEXTURE_2D, self.GLcalB);
+            glActiveTexture(GL_TEXTURE2)
+            glBindTexture(GL_TEXTURE_2D, self.GLcalA)
+
+            glActiveTexture(GL_TEXTURE3)
+            glBindTexture(GL_TEXTURE_2D, self.GLcalB)
 
         x = self.x
         y = self.y
