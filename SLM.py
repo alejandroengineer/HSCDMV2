@@ -52,48 +52,47 @@ class SLM(pyglet.window.Window):
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RED, GL_FLOAT, self.data)
 
-        invSinc = np.vectorize(inverse_sinc)
+        inv_sinc = np.vectorize(inverse_sinc)
 
-        self.sinc_lut = 1 - invSinc(np.linspace(0, 1, 255))
+        self.sinc_lut = 1 - inv_sinc(np.linspace(0, 1, 512))
 
-        glEnable(GL_TEXTURE_1D)
         self.GL_sinc_lut = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_1D, self.GL_sinc_lut)
+        glBindTexture(GL_TEXTURE_2D, self.GL_sinc_lut)
         gl_enable_filtering()
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_R32F, np.size(self.sinc_lut, 0), 0, GL_RED, GL_FLOAT, self.sinc_lut)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.sinc_lut, 0), 1, 0, GL_RED, GL_FLOAT, self.sinc_lut)
 
-        self.calA = np.zeros((64, 64, 4))
-        self.calA[:, :, 1] = 0.5/np.pi;
-        self.GLcalA = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.GLcalA)
+        self.cal_A = np.zeros((64, 64, 4))
+        self.cal_A[:, :, 1] = 0.5/np.pi;
+        self.GL_cal_A = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.calA)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_A, 1), np.size(self.cal_A, 0), 0, GL_RGBA, GL_FLOAT, self.cal_A)
 
-        self.calB = np.zeros((64, 64, 4))
-        self.GLcalB = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.GLcalB)
+        self.cal_B = np.zeros((64, 64, 4))
+        self.GL_cal_B = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.calB)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
 
     def add_shader(self, vert, frag):
         try:
             self.shader = from_files_names(vert, frag)
             print(self.shader.uniforms)
-            self.texLoc = glGetUniformLocation(self.shader.pid, 'tex')
-            self.lutLoc = glGetUniformLocation(self.shader.pid, 'Alut')
-            self.calALoc = glGetUniformLocation(self.shader.pid, 'calA')
-            self.calBLoc = glGetUniformLocation(self.shader.pid, 'calB')
-            self.dirLoc = glGetUniformLocation(self.shader.pid, 'dir')
-            self.ssLoc = glGetUniformLocation(self.shader.pid, 'screen_size')
+            self.tex_Loc = glGetUniformLocation(self.shader.pid, 'tex')
+            self.cal_A_Loc = glGetUniformLocation(self.shader.pid, 'calA')
+            self.cal_B_Loc = glGetUniformLocation(self.shader.pid, 'calB')
+            self.lut_Loc = glGetUniformLocation(self.shader.pid, 'Alut')
+            self.dir_Loc = glGetUniformLocation(self.shader.pid, 'dir')
+            self.screen_size_Loc = glGetUniformLocation(self.shader.pid, 'screen_size')
             self.shader.use()
-            glUniform1i(self.texLoc, 0)
-            glUniform1i(self.lutLoc, 1)
-            glUniform1i(self.calALoc, 2)
-            glUniform1i(self.calBLoc, 3)
+            glUniform1i(self.tex_Loc, 0)
+            glUniform1i(self.cal_A_Loc, 1)
+            glUniform1i(self.cal_B_Loc, 2)
+            glUniform1i(self.lut_Loc, 3)
             self.dir_vector = (2.0*np.pi/13.0, 2.0*np.pi/19.0)
-            glUniform2f(self.dirLoc, self.dir_vector[0], self.dir_vector[1])
-            glUniform2f(self.ssLoc, self.screen_width, self.screen_height)
+            glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
+            glUniform2f(self.screen_size_Loc, self.screen_width, self.screen_height)
             self.shader.clear()
         except ShaderCompilationError as e:
             print(e.logs)
@@ -101,16 +100,16 @@ class SLM(pyglet.window.Window):
 
     def load_calibration(self, file_name):  #load a calibration file
         calibration = sp.loadmat(file_name)
-        self.calA = calibration['calA']
-        self.calB = calibration['calB']
+        self.cal_A = calibration['calA']
+        self.cal_B = calibration['calB']
 
-        glBindTexture(GL_TEXTURE_2D, self.GLcalA)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.calA)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.cal_A)
 
-        glBindTexture(GL_TEXTURE_2D, self.GLcalB)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.calB)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
     def set_location(self, x, y, w, h): #selects, in pixel space, this location and size of the image
         self.x = x
@@ -126,7 +125,7 @@ class SLM(pyglet.window.Window):
 
     def set_dir(self, dx, dy):
         self.dir_vector = (dx, dy);
-        glUniform2f(self.dirLoc, self.dir_vector[0], self.dir_vector[1])
+        glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
     
     def set_array(self, array):     #sets the array which will be drawn (numpy array passed as a 2d array)
                                     #valid array values are from 0 to 1
@@ -172,16 +171,14 @@ class SLM(pyglet.window.Window):
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, self.texture)
 
-            glEnable(GL_TEXTURE_1D)
+            glActiveTexture(GL_TEXTURE0 + 1)
+            glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
 
-            glActiveTexture(GL_TEXTURE1)
-            glBindTexture(GL_TEXTURE_1D, self.GL_sinc_lut)
+            glActiveTexture(GL_TEXTURE0 + 2)
+            glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
 
-            glActiveTexture(GL_TEXTURE2)
-            glBindTexture(GL_TEXTURE_2D, self.GLcalA)
-
-            glActiveTexture(GL_TEXTURE3)
-            glBindTexture(GL_TEXTURE_2D, self.GLcalB)
+            glActiveTexture(GL_TEXTURE0 + 3)
+            glBindTexture(GL_TEXTURE_2D, self.GL_sinc_lut)
 
         x = self.x
         y = self.y

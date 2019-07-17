@@ -1,6 +1,6 @@
 import numpy as np
 
-def LG(nx, ny):
+def LG(nx, ny, waist = 20, mode = 1):
     out = np.zeros((nx, ny))
     x = np.linspace(-1, 1, nx)
     y = np.linspace(-1, 1, ny)
@@ -8,7 +8,7 @@ def LG(nx, ny):
 
     dist = (xx**2) + (yy**2)
 
-    mag = np.sqrt(dist) * np.exp(-dist*20.0)
+    mag = np.sqrt(dist) * np.exp(-dist*waist)
 
     max_mag = np.amax(mag)
 
@@ -16,4 +16,4 @@ def LG(nx, ny):
 
     arg = np.arctan2(yy, xx)
 
-    return mag*np.exp(4.0j*arg)
+    return mag*np.exp(mode*1.0j*arg)
