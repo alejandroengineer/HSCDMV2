@@ -5,9 +5,11 @@ import PCAM
 import time
 import MathUtils as mu
 
-slm = SLM.SLM(0)
+slm = SLM.SLM(1)
 
 slm.enable_blazed()
+
+slm.load_calibration("H1_cal.mat")
 
 fps_ = 60
 
@@ -28,7 +30,7 @@ def update(dt):
     x = np.linspace(0, 1, 16)
     y = np.linspace(0, 1, 16)
     img, yy = np.meshgrid(x, y)
-    img = mu.LG(1024, 1024, 10, 6)#np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])#
+    img = mu.LG(512, 512, 10, 6)#np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])#
     slm.set_location_center(slm.screen_width/2, slm.screen_height/2, 1024, 1024)
     slm.set_array(img)
     #slm.enable_filter()

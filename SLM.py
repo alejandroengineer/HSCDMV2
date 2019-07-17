@@ -100,16 +100,16 @@ class SLM(pyglet.window.Window):
 
     def load_calibration(self, file_name):  #load a calibration file
         calibration = sp.loadmat(file_name)
-        self.cal_A = calibration['calA']
-        self.cal_B = calibration['calB']
+        self.cal_A = calibration['cal_A']
+        self.cal_B = calibration['cal_B']
 
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calA, 1), np.size(self.calA, 0), 0, GL_RGBA, GL_FLOAT, self.cal_A)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_A, 1), np.size(self.cal_A, 0), 0, GL_RGBA, GL_FLOAT, self.cal_A)
 
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
         gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.calB, 1), np.size(self.calB, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
     def set_location(self, x, y, w, h): #selects, in pixel space, this location and size of the image
         self.x = x
