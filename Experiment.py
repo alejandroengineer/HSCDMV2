@@ -5,9 +5,11 @@ import PCAM
 import time
 import MathUtils as mu
 
+from instrumental import instrument, list_instruments
+
 slm = SLM.SLM(1)
 
-slm.enable_blazed()
+#slm.enable_blazed()
 
 slm.load_calibration("H1_cal.mat")
 
@@ -16,6 +18,14 @@ fps_ = 60
 pmillis = int(round(time.time() * 1000))
 
 num_of_frames = 0
+
+inst = list_instruments()
+
+print(inst)
+
+cam = instrument(inst[0])
+
+cam.start_live_video()
 
 def update(dt):
     global fps_
@@ -30,7 +40,9 @@ def update(dt):
     x = np.linspace(0, 1, 16)
     y = np.linspace(0, 1, 16)
     img, yy = np.meshgrid(x, y)
-    img = mu.LG(512, 512, 10, 6)#np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])#
+    frame_ready = cam.wait_for_frame()
+    if frame_ready:
+        img = cam.latest_frame()/255#mu.LG(512, 512, 10, 6)#np.random.choice([0, 1], size = (16, 16), p=[0.9, 0.1])#
     slm.set_location_center(slm.screen_width/2, slm.screen_height/2, 1024, 1024)
     slm.set_array(img)
     #slm.enable_filter()
