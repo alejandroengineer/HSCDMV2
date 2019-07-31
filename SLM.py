@@ -90,7 +90,7 @@ class SLM(pyglet.window.Window):
             glUniform1i(self.cal_A_Loc, 1)
             glUniform1i(self.cal_B_Loc, 2)
             glUniform1i(self.lut_Loc, 3)
-            self.dir_vector = (2.0*np.pi/13.0, 2.0*np.pi/19.0)
+            self.dir_vector = (2.0*np.pi/13.0, 2.0*np.pi/11.0)
             glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
             glUniform2f(self.screen_size_Loc, self.screen_width, self.screen_height)
             self.shader.clear()

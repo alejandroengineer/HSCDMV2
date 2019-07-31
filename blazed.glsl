@@ -10,6 +10,8 @@ uniform sampler2D tex;  //field we want to generate (red - real, greaan - imagin
 uniform sampler2D calA; //calirbation polynomial coefficients stored in the color information of these two textures
 uniform sampler2D calB;
 
+uniform sampler2D calAb;//calibration for system aberations
+
 uniform sampler2D Alut; //lookup table for inverse sinc (used for modulating the amplitude)
 
 uniform vec2 dir;   //direction vector of the grating (1.0/nx, 1.0/ny where nx and ny are ideally coprime)
@@ -21,8 +23,19 @@ float phaseCal(float phi, vec4 A, vec4 B)    {   //converts between phase and pi
     return A.x + phi*(A.y + phi*(A.z + phi*(A.w + phi*(B.x + phi*(B.y + phi*(B.z + phi*B.w))))));  //the polynomial is evaluated using Horner's method
 }
 
+vec2 cmul(vec2 a, vec2 b)   {   //complex multiplication function
+    vec2 out;
+    out.x = a.x*b.x - a.y*b.y;
+    out.y = a.x*b.y + a.y*b.x;
+    return out
+}
+
 void main() {
     vec2 data = texture2D(tex, gl_TexCoord[0].xy).xy;       //retrieve pixel data
+
+    vec2 screen_loc = coords/screen_size;   //the calibration textures require global normalized coordinates
+
+    data = cmul(data, texture2D(calAb, screen_loc));
 
     float mag = sqrt((data.x*data.x) + (data.y*data.y));    //convert to magnitude and phase
     float arg = atan(data.y, data.x);
@@ -34,8 +47,6 @@ void main() {
                                             //grating speed is determined by the length of the direction vector
 
     float phase = texture2D(Alut, vec2(mag, 0)).x * mod(arg + phig, 6.28318530718); //apply the inverse sinc and obtain the blazed grating phase
-
-    vec2 screen_loc = coords/screen_size;   //the calibration textures require global normalized coordinates
 
     vec4 A = texture2D(calA, screen_loc);   //calibration coeffs are obtained from the two calibration textures
     vec4 B = texture2D(calB, screen_loc);
