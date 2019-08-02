@@ -8,19 +8,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 from MathUtils import *
 
-def inverse_sinc(y):    #calculates the inverse of sinc through the use of newtons method
-    if y == 1:
-        return 0
-
-    x = np.sqrt(6*(1 - y))
-
-    for n in range(100):
-        f = (np.sin(x)/x) - y
-        df = (np.cos(x)/x) - (np.sin(x)/(x*x))
-        x = x - (f/df)
-
-    return x/np.pi
-
 def list_screens():
     return pyglet.canvas.get_display().get_screens()
 
@@ -78,12 +65,12 @@ class SLM(pyglet.window.Window):
         self.Ab_width = int(self.screen_width/4)
         self.Ab_height = int(self.screen_height/4)
 
-        self.Ab_mode = 'center'
+        self.Ab_mode = 'fill'
         
         self.GL_cal_Ab = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
         gl_enable_filtering()
-        self.set_zernike_coeffs([0, 0, 0, 0, 0, 0, 0, 0, 5], [0.5, 0, 0, 0, -0.5])
+        self.set_zernike_coeffs([0], [0.5])
 
 
     def add_shader(self, vert, frag):
@@ -140,7 +127,7 @@ class SLM(pyglet.window.Window):
         self.dir_vector = (dx, dy);
         glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
 
-    def set_zernike_coeffs(self, pCoeffs, aCoeffs): #set zernike coeffs for aberation correction
+    def set_zernike_coeffs(self, pCoeffs, aCoeffs = [1]): #set zernike coeffs for aberation correction
         z = zernike_c_profile(self.Ab_width, self.Ab_height, pCoeffs, aCoeffs, mode = self.Ab_mode)
 
         self.cal_Ab = np.zeros((self.Ab_height, self.Ab_width, 2), 'float')

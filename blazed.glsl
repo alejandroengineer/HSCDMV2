@@ -31,7 +31,7 @@ vec2 cmul(vec2 a, vec2 b)   {   //complex multiplication function
 }
 
 void main() {
-    vec2 data = texture2D(tex, gl_TexCoord[0].xy).xy;       //retrieve pixel data
+    vec2 data = texture2D(tex, gl_TexCoord[0].xy).xy;   //retrieve pixel data
 
     vec2 coords = floor(gl_FragCoord.xy);   //fragment coordinates are pixel center justified (or worse, random when AA is enabled)
                                             //the floor must be taken to obtain the actual pixel location
@@ -40,13 +40,15 @@ void main() {
 
     data = cmul(data, texture2D(calAb, screen_loc).xy);     //apply aberation correction
 
-    float mag = sqrt((data.x*data.x) + (data.y*data.y));    //convert to magnitude and phase
+    float mag = length(data);               //convert to magnitude and phase
     float arg = atan(data.y, data.x);
 
     float phig = dot(gl_FragCoord.xy, dir); //blazed grating phase is obtained by taking a dot product between the pixel location and the grating direction
                                             //grating speed is determined by the length of the direction vector
 
-    float phase = texture2D(Alut, vec2(mag, 0)).x * mod(arg + phig, 6.28318530718); //apply the inverse sinc and obtain the blazed grating phase
+    float M = texture2D(Alut, vec2(mag, 0)).x;  //inverse sinc of the magnitude
+
+    float phase = M * mod(arg + phig + 3.141592653589*(1 - M), 6.28318530718);    //apply the inverse sinc and obtain the blazed grating phase
 
     vec4 A = texture2D(calA, screen_loc);   //calibration coeffs are obtained from the two calibration textures
     vec4 B = texture2D(calB, screen_loc);

@@ -75,8 +75,8 @@ def zernike_profile(nx, ny, coeffs, mode = 'center'):
     out = np.zeros((ny, nx))
 
     for k in range(n):
-        print(coeffs[k])
-        out = out + (coeffs[k]*zernike(nx, ny, k, mode = mode))
+        if coeffs != 0 and coeffs != 0.0:
+            out = out + (coeffs[k]*zernike(nx, ny, k, mode = mode))
     
     return out
 
@@ -87,3 +87,49 @@ def zernike_c_profile(nx, ny, pCoeffs, aCoeffs, mode = 'center'):
     out = amp*np.exp(1.0j*np.pi*phase)
 
     return out
+
+def inverse_sinc(y):    #calculates the inverse of sinc through the use of newtons method
+    if y == 1:
+        return 0
+
+    x = np.sqrt(6*(1 - y))
+
+    for n in range(100):
+        f = (np.sin(x)/x) - y
+        df = (np.cos(x)/x) - (np.sin(x)/(x*x))
+        x = x - (f/df)
+
+    return x/np.pi
+
+def center_cam(cam, threshold = 0.1):
+    cam2 = cam - threshold
+    cam2 = cam2*(cam2 > 0)
+    Nx = np.size(cam2, 0)
+    Ny = np.size(cam2, 1)
+
+    x = np.linspace(0, Nx-1, Nx)
+    y = np.linspace(0, Ny-1, Ny)
+
+    yy, xx = np.meshgrid(y, x)
+
+    sum = np.sum(np.sum(cam2))
+
+    x = np.sum(np.sum(xx*cam2))/sum
+    y = np.sum(np.sum(yy*cam2))/sum
+
+    return x, y
+
+def circular_integral(input, cx, cy, r):
+    Nx = np.size(input, 0)
+    Ny = np.size(input, 1)
+
+    x = np.linspace(0, Nx-1, Nx)
+    y = np.linspace(0, Ny-1, Ny)
+
+    yy, xx = np.meshgrid(y, x)
+
+    dist = ((xx - cx)**2) + ((yy - cy)**2)
+
+    mask = (dist < (r**2))
+
+    return np.sum(np.sum(mask*input))
