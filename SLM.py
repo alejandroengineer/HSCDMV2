@@ -6,6 +6,7 @@ from pyglet.gl import gl
 from pyshaders import from_files_names, ShaderCompilationError
 from OpenGL.GL import *
 from OpenGL.GLU import *
+from MathUtils import *
 
 def inverse_sinc(y):    #calculates the inverse of sinc through the use of newtons method
     if y == 1:
@@ -74,6 +75,16 @@ class SLM(pyglet.window.Window):
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
+        self.Ab_width = int(self.screen_width/4)
+        self.Ab_height = int(self.screen_height/4)
+
+        self.Ab_mode = 'center'
+        
+        self.GL_cal_Ab = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
+        gl_enable_filtering()
+        self.set_zernike_coeffs([0, 0, 0, 0, 0, 0, 0, 0, 5], [0.5, 0, 0, 0, -0.5])
+
 
     def add_shader(self, vert, frag):
         try:
@@ -82,6 +93,7 @@ class SLM(pyglet.window.Window):
             self.tex_Loc = glGetUniformLocation(self.shader.pid, 'tex')
             self.cal_A_Loc = glGetUniformLocation(self.shader.pid, 'calA')
             self.cal_B_Loc = glGetUniformLocation(self.shader.pid, 'calB')
+            self.cal_Ab_Loc = glGetUniformLocation(self.shader.pid, 'calAb')
             self.lut_Loc = glGetUniformLocation(self.shader.pid, 'Alut')
             self.dir_Loc = glGetUniformLocation(self.shader.pid, 'dir')
             self.screen_size_Loc = glGetUniformLocation(self.shader.pid, 'screen_size')
@@ -89,7 +101,8 @@ class SLM(pyglet.window.Window):
             glUniform1i(self.tex_Loc, 0)
             glUniform1i(self.cal_A_Loc, 1)
             glUniform1i(self.cal_B_Loc, 2)
-            glUniform1i(self.lut_Loc, 3)
+            glUniform1i(self.cal_Ab_Loc, 3)
+            glUniform1i(self.lut_Loc, 4)
             self.dir_vector = (2.0*np.pi/13.0, 2.0*np.pi/11.0)
             glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
             glUniform2f(self.screen_size_Loc, self.screen_width, self.screen_height)
@@ -98,7 +111,7 @@ class SLM(pyglet.window.Window):
             print(e.logs)
             self.shader = None
 
-    def load_calibration(self, file_name):  #load a calibration file
+    def load_calibration(self, file_name):  #load a calibration file for h/v relations
         calibration = sp.loadmat(file_name)
         self.cal_A = calibration['cal_A']
         self.cal_B = calibration['cal_B']
@@ -126,9 +139,18 @@ class SLM(pyglet.window.Window):
     def set_dir(self, dx, dy):
         self.dir_vector = (dx, dy);
         glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
+
+    def set_zernike_coeffs(self, pCoeffs, aCoeffs): #set zernike coeffs for aberation correction
+        z = zernike_c_profile(self.Ab_width, self.Ab_height, pCoeffs, aCoeffs, mode = self.Ab_mode)
+
+        self.cal_Ab = np.zeros((self.Ab_height, self.Ab_width, 2), 'float')
+        self.cal_Ab[..., 0] = np.real(z)
+        self.cal_Ab[..., 1] = np.imag(z)
+        glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, np.size(self.cal_Ab, 1), np.size(self.cal_Ab, 0), 0, GL_RG, GL_FLOAT, self.cal_Ab)
     
     def set_array(self, array):     #sets the array which will be drawn (numpy array passed as a 2d array)
-                                    #valid array values are from 0 to 1
+                                    #valid array values are from 0 to 1 if in normal mode, or magnitudes less than 1 in blazed mode
         width = np.size(array, 0)
         height = np.size(array, 1)
 
@@ -178,6 +200,9 @@ class SLM(pyglet.window.Window):
             glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
 
             glActiveTexture(GL_TEXTURE0 + 3)
+            glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
+            
+            glActiveTexture(GL_TEXTURE0 + 4)
             glBindTexture(GL_TEXTURE_2D, self.GL_sinc_lut)
 
         x = self.x

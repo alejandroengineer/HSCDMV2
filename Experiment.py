@@ -5,10 +5,10 @@ import PCAM
 import time
 import MathUtils as mu
 
-from instrumental import instrument, list_instruments
+#from instrumental import instrument, list_instruments
 
-slm = SLM.SLM(3)
-slm2 = SLM.SLM(2)
+slm = SLM.SLM(0)#3)
+#slm2 = SLM.SLM(2)
 
 slm.enable_blazed()
 
@@ -20,9 +20,9 @@ pmillis = int(round(time.time() * 1000))
 
 num_of_frames = 0
 
-inst = list_instruments()
+#inst = list_instruments()
 
-print(inst)
+#print(inst)
 
 #cam = instrument(inst[0])
 
@@ -58,8 +58,8 @@ def update(dt):
     slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
     slm.set_array(img)
     slm.enable_filter()
-    min_size = min(slm2.screen_height, slm2.screen_width)
-    slm2.set_location_center(slm2.screen_width/2, slm2.screen_height/2, min_size, min_size)
+    #min_size = min(slm2.screen_height, slm2.screen_width)
+    #slm2.set_location_center(slm2.screen_width/2, slm2.screen_height/2, min_size, min_size)
     #slm2.set_array(img2)
 
 pyglet.clock.schedule_interval(update, 1/60.0)

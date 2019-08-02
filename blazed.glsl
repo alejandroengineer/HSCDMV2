@@ -24,24 +24,24 @@ float phaseCal(float phi, vec4 A, vec4 B)    {   //converts between phase and pi
 }
 
 vec2 cmul(vec2 a, vec2 b)   {   //complex multiplication function
-    vec2 out;
-    out.x = a.x*b.x - a.y*b.y;
-    out.y = a.x*b.y + a.y*b.x;
-    return out
+    vec2 c;
+    c.x = a.x*b.x - a.y*b.y;
+    c.y = a.x*b.y + a.y*b.x;
+    return c;
 }
 
 void main() {
     vec2 data = texture2D(tex, gl_TexCoord[0].xy).xy;       //retrieve pixel data
 
+    vec2 coords = floor(gl_FragCoord.xy);   //fragment coordinates are pixel center justified (or worse, random when AA is enabled)
+                                            //the floor must be taken to obtain the actual pixel location
+
     vec2 screen_loc = coords/screen_size;   //the calibration textures require global normalized coordinates
 
-    data = cmul(data, texture2D(calAb, screen_loc));
+    data = cmul(data, texture2D(calAb, screen_loc).xy);     //apply aberation correction
 
     float mag = sqrt((data.x*data.x) + (data.y*data.y));    //convert to magnitude and phase
     float arg = atan(data.y, data.x);
-
-    vec2 coords = floor(gl_FragCoord.xy);   //fragment coordinates are pixel center justified (or worse, random when AA is enabled)
-                                            //the floor must be taken to obtain the actual pixel location
 
     float phig = dot(gl_FragCoord.xy, dir); //blazed grating phase is obtained by taking a dot product between the pixel location and the grating direction
                                             //grating speed is determined by the length of the direction vector
