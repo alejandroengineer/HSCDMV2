@@ -29,7 +29,7 @@ def zernike_index(index):
 
     return int(n), int(m)
 
-def zernike(nx, ny, index, mode = 'center'):
+def zernike(nx, ny, index, mode = 'center', mask = False):
     n, m = zernike_index(index)
 
     z = np.zeros((ny, nx))
@@ -57,15 +57,17 @@ def zernike(nx, ny, index, mode = 'center'):
     else:
         r2z = np.cos(m*a)
 
-    mask = (r < 1)
-
     R = np.zeros((ny, nx))
 
     for k in range(pLength+1):
         coeff = (((-1)**k)*math.factorial(n-k)/(math.factorial(k)*math.factorial(((n+m)/2) - k)*math.factorial(((n-m)/2) - k)))
         R = R + (r**(n - 2*k))*coeff
     
-    z = mask*r2z*R
+    z = r2z*R
+
+    if mask == True:
+        mask_ = (r < 1)
+        z = z*mask_
 
     return z
 
@@ -75,7 +77,7 @@ def zernike_profile(nx, ny, coeffs, mode = 'center'):
     out = np.zeros((ny, nx))
 
     for k in range(n):
-        if coeffs != 0 and coeffs != 0.0:
+        if coeffs[k] != 0 and coeffs[k] != 0.0:
             out = out + (coeffs[k]*zernike(nx, ny, k, mode = mode))
     
     return out
@@ -118,6 +120,21 @@ def center_cam(cam, threshold = 0.1):
     y = np.sum(np.sum(yy*cam2))/sum
 
     return x, y
+
+def circular_integral_fast(input_, cx_, cy_, r):
+    cx_f = np.floor(cx_)
+    cy_f = np.floor(cy_)
+    r_f = np.floor(r) + 3
+
+    Nx = np.size(input_, 0)
+    Ny = np.size(input_, 1)
+
+    ex = max(0, cx_f - r_f)
+    ey = max(0, cy_f - r_f)
+
+    input = input_[int(ex):int(min(Nx-1, cx_f + r_f)), int(ey):int(min(Ny-1, cy_f + r_f))]
+
+    return circular_integral(input, cx_ - ex, cy_ - ey, r)
 
 def circular_integral(input, cx, cy, r):
     Nx = np.size(input, 0)

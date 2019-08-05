@@ -62,10 +62,10 @@ class SLM(pyglet.window.Window):
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
-        self.Ab_width = int(self.screen_width/4)
-        self.Ab_height = int(self.screen_height/4)
+        self.Ab_width = int(self.screen_width/8)
+        self.Ab_height = int(self.screen_height/8)
 
-        self.Ab_mode = 'fill'
+        self.Ab_mode = 'center'
         
         self.GL_cal_Ab = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
@@ -128,6 +128,8 @@ class SLM(pyglet.window.Window):
         glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
 
     def set_zernike_coeffs(self, pCoeffs, aCoeffs = [1]): #set zernike coeffs for aberation correction
+        self.phase_coeffs = pCoeffs;
+        self.amplitude_coeffs = aCoeffs;
         z = zernike_c_profile(self.Ab_width, self.Ab_height, pCoeffs, aCoeffs, mode = self.Ab_mode)
 
         self.cal_Ab = np.zeros((self.Ab_height, self.Ab_width, 2), 'float')

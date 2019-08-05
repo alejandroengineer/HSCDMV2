@@ -35,7 +35,7 @@ num_of_frames = 0
 #print(cam.exposure_time)
 
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
-slm.set_zernike_coeffs([0, 0, 0, -0.3, -1, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
+slm.set_zernike_coeffs([0, 0, 0, -0.17, -0.56, 0, -0.0844, 0.1055, 0.1055, -0.0844, 0, 0, 0], [0.75])
 
 def update(dt):
     global fps_
