@@ -4,6 +4,7 @@ import SLM
 import PCAM
 import time
 import MathUtils as mu
+import matplotlib.pyplot as plt
 
 #from instrumental import instrument, list_instruments
 
@@ -35,7 +36,9 @@ num_of_frames = 0
 #print(cam.exposure_time)
 
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
-slm.set_zernike_coeffs([0, 0, 0, -0.17, -0.56, 0, -0.0844, 0.1055, 0.1055, -0.0844, 0, 0, 0], [0.75])
+#slm.set_zernike_coeffs([0, 0, 0, -0.17, -0.56, 0, -0.0844, 0.1055, 0.1055, -0.0844, 0, 0, 0], [0.75])
+slm.set_zernike_coeffs([0, 0, 0, -0.025, -0.5, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [0.75])
+
 
 def update(dt):
     global fps_

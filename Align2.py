@@ -9,14 +9,18 @@ import matplotlib.pyplot as plt
 import quantities as pq
 from instrumental import instrument, list_instruments
 
-num_of_coeffs = 20
-first_coeff = 1
+num_of_coeffs = 7
+first_coeff = 3
 
 dx = 0.05
-step = 0.5
+step = -0.25
+
+brightness = 0.75
 
 slm = SLM.SLM(3)
-slm2 = SLM.SLM(2)
+#slm2 = SLM.SLM(2)
+
+fig, ax = plt.subplots()
 
 slm.enable_blazed()
 
@@ -37,14 +41,15 @@ cam.gain_boost = False
 
 #cam.start_live_video(framerate = '60 hertz', exposure_time='0.05 millisecond')
 
-current_coeffs = [0.1338858,  -0.04361271,  0.0405758, -0.54168096, -0.05750595,
- -0.06092065,  0.27694177,  0.06299513, -0.14471439,  0.05366629,  0.09215891,
- -0.34178976,  0.39306562,  0.20678763,  0.08826728,  0.02828799, -0.02992248,
- -0.10104176, -0.07010867, -0.02751629]
+current_coeffs = [0, 0, 0, 0, 0, 0, 0]#-0.025, -0.5, 0, -.04, 0.1055, 0.1055, -0.04]
+#[0.1338858,  -0.04361271,  0.0405758, -0.54168096, -0.05750595,
+# -0.06092065,  0.27694177,  0.06299513, -0.14471439,  0.05366629,  0.09215891,
+# -0.34178976,  0.39306562,  0.20678763,  0.08826728,  0.02828799, -0.02992248,
+# -0.10104176, -0.07010867, -0.02751629]
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
-tmp = [0]
+tmp = [0, 0, 0]
 tmp.extend(current_coeffs)
-slm.set_zernike_coeffs(tmp, [1])
+slm.set_zernike_coeffs(tmp, [brightness])
 
 x = np.linspace(-1, 1, 128*8)
 y = np.linspace(-1, 1, 128*8)
@@ -77,12 +82,12 @@ def update(dt):
     #    print('ahh')
     img2 = cam.grab_image(exposure_time='0.0005 millisecond')/255
     cx, cy = mu.center_cam(img2)
-    total = mu.circular_integral(img2, cx, cy, 8)/mu.circular_integral(img2, cx, cy, 256)
+    total = mu.circular_integral_fast(img2, cx, cy, 10)/mu.circular_integral_fast(img2, cx, cy, 128)
     #total = mu.circular_integral_fast(img2, cx, cy, 8)
 
     #print(total - total2)
 
-    slm2.set_array(img2)
+    #slm2.set_array(img2)
 
     delta = np.zeros(num_of_coeffs)
 
@@ -102,11 +107,14 @@ def update(dt):
     pcoeffs = np.zeros(num_of_coeffs + first_coeff)
     pcoeffs[first_coeff:(num_of_coeffs + first_coeff)] = current_coeffs + delta
     
-    slm.set_zernike_coeffs(pcoeffs, [1])
+    slm.set_zernike_coeffs(pcoeffs, [brightness])
 
     if mode == 0:
+        print(pyglet.clock.get_fps())
         print(total)
         print(pcoeffs)
+        im = ax.imshow(img2)
+        plt.pause(0.05)
 
     counter = counter + 1
     #pyglet.clock.get_fps())
@@ -121,3 +129,5 @@ def on_window_close(window):
     event_loop.exit()
 
 pyglet.app.run()
+
+plt.show()
