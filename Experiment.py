@@ -10,8 +10,12 @@ from PIL import Image, ImageFilter
 
 import scipy.io as sp
 
-Nx = 16
-Ny = 16
+Nx = 128
+Ny = 128
+
+Num_of_meas = 64*80
+
+threshold = 6
 
 fig=plt.figure(figsize=(2, 2))
 
@@ -42,17 +46,17 @@ xx, yy = np.meshgrid(x, y)
 
 im = Image.open("abc.png")
 im = im.filter(ImageFilter.BLUR)
-np_im = np.array(im)
+np_im = 255.0 - np.array(im)
 
 phase_image = 1.5*np.pi*np_im[:, :, 1]/255.0
 
 pimg = np.exp(1.0j*phase_image)
 
 dist = (xx**2) + (yy**2)
-img = dist < 1.0
+img = dist < 0.25
 min_size = min(slm.screen_height, slm.screen_width)
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
-slm.set_array(img)#*pimg)
+slm.set_array(img.astype(float)*np_im[:, :, 1]/255.0)#*pimg)
 slm.enable_filter()
 
 cam = pc.PCAM()
@@ -64,7 +68,9 @@ V_list = []
 D_list = []
 A_list = []
 
-masks = np.empty((0, Nx*Ny))
+#img_list = np.zeros((0, cam.w*cam.h))
+
+masks = np.zeros((Num_of_meas, Nx*Ny))
 
 count = 0
 
@@ -74,19 +80,35 @@ def update(dt):
     global V_list
     global D_list
     global A_list
+    global img_list
     global masks
 
     print(pyglet.clock.get_fps())
-    cam.fetch_buffer()
+
+    avg_num = 16
+    skip_num = 4
+
+    raw_sum = np.zeros((cam.w, cam.h))
+    for n in range(avg_num):
+        cam.fetch_buffer()
+        if n >= skip_num:
+            raw_sum = raw_sum + cam.raw_image
+        cam.queue_buffer()
+
+    cam.raw_image = raw_sum/(avg_num - skip_num)
+
+    #img_list = np.append(img_list, np.reshape(cam.raw_image, (1, cam.w*cam.h)), axis=0)
 
     H, V, D, A = cam.get_pol()
 
+    total_power = np.sum(V)
+
     cx, cy = mu.center_cam(V, 0.25)
 
-    hi = mu.circular_integral_fast(H, cx, cy, 3)/4096.0
-    vi = mu.circular_integral_fast(V, cx, cy, 3)/4096.0
-    di = mu.circular_integral_fast(D, cx, cy, 3)/4096.0
-    ai = mu.circular_integral_fast(A, cx, cy, 3)/4096.0
+    hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 4)/total_power#4096.0
+    vi = mu.circular_integral_fast(V, cx, cy, 4)/total_power#4096.0
+    di = mu.circular_integral_fast(D, cx, cy + 0.5, 4)/total_power#4096.0
+    ai = mu.circular_integral_fast(A, cx - 0.5, cy, 4)/total_power#4096.0
 
     img = np.zeros((Nx, Ny))
 
@@ -97,35 +119,37 @@ def update(dt):
         A_list.append(ai)
     
     if count > 4:
-        img = np.random.choice([0, 1], size = (Nx, Ny), p=[0.8, 0.2])
+        img = np.random.choice([0.0, 1.0], size = (Nx, Ny), p=[0.8, 0.2])
 
     img_1d = np.reshape(img, (1, Nx*Ny))
 
-    masks = np.append(masks, img_1d, 0)
+    masks[count, :] = img_1d
 
-    slm2.set_array(np.exp(1.0j*(np.pi*0.4 + img*np.pi)))
-    slm2.set_location_center(slm2.screen_width/2, slm2.screen_height/2, 512, 512)
+    slm2.set_array(np.exp(1.0j*(np.pi*0.19 + (img*np.pi*0.51))))
+    slm2.set_location_center(slm2.screen_width/2, 75 + slm2.screen_height/2, 200, 200)
     slm2.disable_filter()
 
-    fig.add_subplot(2, 2, 1)
-    plt.imshow(H)
+    # fig.add_subplot(2, 2, 1)
+    # plt.imshow(H)
 
-    fig.add_subplot(2, 2, 2)
-    plt.imshow(V)
+    # fig.add_subplot(2, 2, 2)
+    # plt.imshow(V)
 
-    fig.add_subplot(2, 2, 3)
-    plt.imshow(D)
+    # fig.add_subplot(2, 2, 3)
+    # plt.imshow(D)
 
-    fig.add_subplot(2, 2, 4)
-    plt.imshow(A)
+    # fig.add_subplot(2, 2, 4)
+    # plt.imshow(A)
 
-    cam.queue_buffer()
-
-    plt.pause(0.01)
+    # plt.pause(0.05)
 
     print(count)
 
     count = count + 1
+
+    if count >= Num_of_meas:
+        slm.close()
+        slm2.close()
 
 pyglet.clock.schedule_interval(update, 1/60.0)
 
@@ -137,14 +161,17 @@ def on_window_close(window):
 
 pyglet.app.run()
 
-sp.savemat('first_run.mat', {
+sp.savemat('first_run11.mat', {
     'H': np.array(H_list),
     'V': np.array(V_list),
     'D': np.array(D_list),
     'U': np.array(A_list),
-    'masks': masks
+    'masks': masks,
+    #'raw_image': img_list,
+    'Nx': Nx,
+    'Ny': Ny
     })
 
 cam.__del__()
 
-plt.show()
+# plt.show()

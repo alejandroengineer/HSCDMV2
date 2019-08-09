@@ -149,4 +149,6 @@ def circular_integral(input, cx, cy, r):
 
     mask = (dist < (r**2))
 
-    return np.sum(np.sum(mask*input))
+    norm = np.sum(mask.astype(float))
+
+    return np.sum(np.sum(mask*input/norm))

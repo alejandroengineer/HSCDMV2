@@ -19,6 +19,8 @@ uniform vec2 dir;   //direction vector of the grating (1.0/nx, 1.0/ny where nx a
 
 uniform vec2 screen_size;   //the size of the screen is needed for the calibration texture
 
+#define PI 3.141592653589
+
 float phaseCal(float phi, vec4 A, vec4 B)    {   //converts between phase and pixel values using a calibration polynomial
     return A.x + phi*(A.y + phi*(A.z + phi*(A.w + phi*(B.x + phi*(B.y + phi*(B.z + phi*B.w))))));  //the polynomial is evaluated using Horner's method
 }
@@ -43,12 +45,16 @@ void main() {
     float mag = length(data);               //convert to magnitude and phase
     float arg = atan(data.y, data.x);
 
+    if(arg < 0) {
+        arg += 2.0*PI;
+    }
+
     float phig = dot(gl_FragCoord.xy, dir); //blazed grating phase is obtained by taking a dot product between the pixel location and the grating direction
                                             //grating speed is determined by the length of the direction vector
 
     float M = texture2D(Alut, vec2(mag, 0)).x;  //inverse sinc of the magnitude
 
-    float phase = M * mod(arg + phig + 3.141592653589*(1 - M), 6.28318530718);    //apply the inverse sinc and obtain the blazed grating phase
+    float phase = M * mod(arg + phig + PI*(1 - M), 2.0*PI);    //apply the inverse sinc and obtain the blazed grating phase
 
     vec4 A = texture2D(calA, screen_loc);   //calibration coeffs are obtained from the two calibration textures
     vec4 B = texture2D(calB, screen_loc);

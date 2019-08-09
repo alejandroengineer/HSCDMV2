@@ -80,10 +80,10 @@ class PCAM:
         data_1_2d = np.reshape(data_1, (h, int(w/2)))
         data_2_2d = np.reshape(data_2, (h, int(w/2)))
 
-        self.Ai = data_1_2d[0::2, :]
-        self.Hi = data_1_2d[1::2, :]
-        self.Vi = data_2_2d[0::2, :]
-        self.Di = data_2_2d[1::2, :]
+        self.Di = data_1_2d[0::2, :].astype(float)
+        self.Vi = data_1_2d[1::2, :].astype(float)
+        self.Hi = data_2_2d[0::2, :].astype(float)
+        self.Ai = data_2_2d[1::2, :].astype(float)
         
         return self.Hi, self.Vi, self.Di, self.Ai
 

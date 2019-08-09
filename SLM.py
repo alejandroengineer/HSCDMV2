@@ -106,8 +106,8 @@ class SLM(pyglet.window.Window):
 
     def load_calibration(self, file_name):  #load a calibration file for h/v relations
         calibration = sp.loadmat(file_name)
-        self.cal_A = calibration['cal_A']
-        self.cal_B = calibration['cal_B']
+        self.cal_A = calibration['cal_A']*2.0
+        self.cal_B = calibration['cal_B']*2.0
 
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
         gl_enable_filtering()
