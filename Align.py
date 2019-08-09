@@ -6,7 +6,6 @@ import time
 import MathUtils as mu
 import matplotlib.pyplot as plt
 
-import quantities as pq
 from instrumental import instrument, list_instruments
 
 num_of_coeffs = 20

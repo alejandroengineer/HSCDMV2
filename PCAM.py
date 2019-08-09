@@ -19,6 +19,11 @@ class PCAM:
         self.format = self.ia.device.node_map.PixelFormat.value
         self.exposure = self.ia.device.node_map.ExposureTimeRaw.value
         self.buffer = None
+        self.raw_image = None
+        self.Hi = None
+        self.Vi = None
+        self.Di = None
+        self.Ai = None
 
     def __del__(self):
         if self.buffer != None:
@@ -59,7 +64,28 @@ class PCAM:
 
     def fetch_buffer(self):
         self.buffer = self.ia.fetch_buffer()
-        return self.buffer.payload.components[0].data.reshape(self.w, self.h)
+        self.raw_image = self.buffer.payload.components[0].data.reshape(self.h, self.w)
+        return self.raw_image
+
+    def get_pol(self):
+        num = np.size(self.raw_image)
+        h = np.size(self.raw_image, 0)
+        w = np.size(self.raw_image, 1)
+
+        data = np.reshape(self.raw_image, (num, 1))
+
+        data_1 = data[0:num:2]
+        data_2 = data[1:num:2]
+
+        data_1_2d = np.reshape(data_1, (h, int(w/2)))
+        data_2_2d = np.reshape(data_2, (h, int(w/2)))
+
+        self.Ai = data_1_2d[0::2, :]
+        self.Hi = data_1_2d[1::2, :]
+        self.Vi = data_2_2d[0::2, :]
+        self.Di = data_2_2d[1::2, :]
+        
+        return self.Hi, self.Vi, self.Di, self.Ai
 
     def queue_buffer(self):
         self.buffer.queue()

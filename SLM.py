@@ -70,7 +70,7 @@ class SLM(pyglet.window.Window):
         self.GL_cal_Ab = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.GL_cal_Ab)
         gl_enable_filtering()
-        self.set_zernike_coeffs([0], [0.5])
+        self.set_zernike_coeffs([0], [1])
 
 
     def add_shader(self, vert, frag):
@@ -97,6 +97,12 @@ class SLM(pyglet.window.Window):
         except ShaderCompilationError as e:
             print(e.logs)
             self.shader = None
+
+    def set_k_vector(self, kx, ky):
+        self.dir_vector = (kx, ky)
+        self.shader.use()
+        glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
+            
 
     def load_calibration(self, file_name):  #load a calibration file for h/v relations
         calibration = sp.loadmat(file_name)

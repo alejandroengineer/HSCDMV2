@@ -129,8 +129,8 @@ def circular_integral_fast(input_, cx_, cy_, r):
     Nx = np.size(input_, 0)
     Ny = np.size(input_, 1)
 
-    ex = max(0, cx_f - r_f)
-    ey = max(0, cy_f - r_f)
+    ex = np.floor(max(0, cx_f - r_f))
+    ey = np.floor(max(0, cy_f - r_f))
 
     input = input_[int(ex):int(min(Nx-1, cx_f + r_f)), int(ey):int(min(Ny-1, cy_f + r_f))]
 
