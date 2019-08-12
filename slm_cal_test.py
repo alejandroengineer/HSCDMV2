@@ -18,7 +18,7 @@ cam = pc.PCAM()
 slm = SLM.SLM(3)
 slm2 = SLM.SLM(1)
 
-slm2.load_calibration("H1_cal.mat")
+slm2.load_calibration("D:\Alejandro\slm cals\H4_cal.mat")
 
 slm.enable_blazed()
 slm2.enable_blazed()
@@ -39,7 +39,7 @@ slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_s
 slm.set_array(img)
 slm.enable_filter()
 
-img = np.ones((64, 64)) * np.exp(1.0j*np.pi*0.7)#*0.19)#
+img = np.ones((64, 64)) * np.exp(1.0j*np.pi*0.24)#0.7)#*0.19)#
 slm2.set_array(img)
 slm2.set_location_center(slm2.screen_width/2, slm2.screen_height/2, slm2.screen_width, slm2.screen_height)
 
