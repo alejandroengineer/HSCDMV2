@@ -39,7 +39,14 @@ class SLM(pyglet.window.Window):
         glBindTexture(GL_TEXTURE_2D, self.texture)
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RED, GL_FLOAT, self.data)
-
+        
+        self.zero_tex = np.zeros((64, 64))
+        glEnable(GL_TEXTURE_2D)
+        self.GL_zero_tex = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.GL_zero_tex)
+        gl_enable_filtering()
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.zero_tex, 0), np.size(self.zero_tex, 1), 0, GL_RED, GL_FLOAT, self.zero_tex)
+        
         inv_sinc = np.vectorize(inverse_sinc)
 
         self.sinc_lut = 1 - inv_sinc(np.linspace(0, 1, 512))
@@ -102,6 +109,15 @@ class SLM(pyglet.window.Window):
         self.dir_vector = (kx, ky)
         self.shader.use()
         glUniform2f(self.dir_Loc, self.dir_vector[0], self.dir_vector[1])
+
+
+    def set_zero(self, z):
+        self.zero_tex = np.zeros((64, 64, 2), 'float')
+        self.zero_tex[..., 0] = np.real(z)
+        self.zero_tex[..., 1] = np.imag(z)
+        glBindTexture(GL_TEXTURE_2D, self.GL_zero_tex)
+        gl_enable_filtering()
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, np.size(self.zero_tex, 0), np.size(self.zero_tex, 1), 0, GL_RG, GL_FLOAT, self.zero_tex)
             
 
     def load_calibration(self, file_name):  #load a calibration file for h/v relations
@@ -186,7 +202,7 @@ class SLM(pyglet.window.Window):
             glEnable(GL_TEXTURE_2D)
             
             glActiveTexture(GL_TEXTURE0)
-            glBindTexture(GL_TEXTURE_2D, self.texture)
+            glBindTexture(GL_TEXTURE_2D, self.GL_zero_tex)
 
             glActiveTexture(GL_TEXTURE0 + 1)
             glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
@@ -199,6 +215,18 @@ class SLM(pyglet.window.Window):
             
             glActiveTexture(GL_TEXTURE0 + 4)
             glBindTexture(GL_TEXTURE_2D, self.GL_sinc_lut)
+
+            x = 0
+            y = 0
+            w = self.screen_width
+            h = self.screen_height
+
+            pyglet.graphics.draw_indexed(4, pyglet.gl.GL_TRIANGLES, [0, 1, 2, 0, 2, 3],
+                ('v2f', (x, y, x+w, y, x+w, y+h, x, y+h)),
+                ('t2f', (0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0)))
+
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_2D, self.texture)
 
         x = self.x
         y = self.y

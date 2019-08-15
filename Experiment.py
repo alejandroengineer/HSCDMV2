@@ -10,23 +10,24 @@ from PIL import Image, ImageFilter
 
 import scipy.io as sp
 
-fig=plt.figure(figsize=(2, 2))
+show_cam = False
 
 Nx = 16*4
 Ny = 16*4
 
 phase1 = 0.24
-phase2 = 1.18
+phase2 = 1.21
 
 phase_rot = np.pi
 
-activation_ratio = 0.2
+activation_ratio = 0.1
 
-Num_of_meas = 32*16*2
+Num_of_meas = int(Nx*Ny)
 
 threshold = 4
 
-#fig=plt.figure(figsize=(2, 2))
+if show_cam:
+    fig=plt.figure(figsize=(2, 2))
 
 slm = SLM.SLM(3)
 slm2 = SLM.SLM(1)
@@ -36,6 +37,8 @@ slm2.enable_blazed()
 
 slm2.set_k_vector(0, 0)
 slm2.disable_filter()
+
+slm2.set_zero(np.exp(1.0j*np.pi*phase1))
 
 slm2.load_calibration("D:\Alejandro\slm cals\H4_cal.mat")
 
@@ -47,13 +50,13 @@ num_of_frames = 0
 
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
 #slm.set_zernike_coeffs([0, 0, 0, -0.17, -0.56, 0, -0.0844, 0.1055, 0.1055, -0.0844, 0, 0, 0], [0.75])
-slm.set_zernike_coeffs([0, 2.07, 1.5, -0.025, -0.75, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [1])
+slm.set_zernike_coeffs([0, 2.07, 4, -0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [1])
 
 x = np.linspace(-1, 1, 128*4)
 y = np.linspace(-1, 1, 128*4)
 xx, yy = np.meshgrid(x, y)
 
-im = Image.open("Star.png")#"logo_radial_ramp_512.png")#"abc.png")
+im = Image.open("logo_ramps_512.png")#"Star.png")#"logo_radial_ramp_512.png")#"abc.png")
 #im = im.filter(ImageFilter.BLUR)
 np_im = np.array(im)
 
@@ -62,10 +65,10 @@ phase_image = 2*np.pi*np_im[:, :, 1]/255.0
 pimg = np.exp(1.0j*phase_image)
 
 dist = (xx**2) + (yy**2)
-img = dist < 0.83
-min_size = min(slm.screen_height, slm.screen_width)*1.25
+img = dist < 1
+min_size = min(slm.screen_height, slm.screen_width)*0.8
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
-slm.set_array(img.astype(float)*np_im[:, :, 1]/255.0)#*pimg)
+slm.set_array(img.astype(float)*pimg)#np_im[:, :, 1]/255.0)#
 slm.enable_filter()
 
 cam = pc.PCAM()
@@ -77,7 +80,13 @@ V_list = []
 D_list = []
 A_list = []
 
-#img_list = np.zeros((0, cam.w*cam.h))
+cw = int(cam.w/2)
+ch = int(cam.h/2)
+
+H_img_list = np.zeros((cw, ch, Num_of_meas))
+V_img_list = np.zeros((cw, ch, Num_of_meas))
+D_img_list = np.zeros((cw, ch, Num_of_meas))
+A_img_list = np.zeros((cw, ch, Num_of_meas))
 
 masks = np.zeros((Num_of_meas, Nx*Ny))
 
@@ -123,16 +132,21 @@ def update(dt):
 
     cam.raw_image = raw_sum/(avg_num - skip_num)
 
-    #img_list = np.append(img_list, np.reshape(cam.raw_image, (1, cam.w*cam.h)), axis=0)
-    
+    print(np.max(cam.raw_image))
+
+    H_img_list[:, :, count] = H
+    V_img_list[:, :, count] = V
+    D_img_list[:, :, count] = D
+    A_img_list[:, :, count] = A
+
     total_power = np.sum(V)
 
     cx, cy = mu.center_cam(V, 0)
 
-    hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 8)/total_power#4096.0
-    vi = mu.circular_integral_fast(V, cx, cy, 8)/total_power#4096.0
-    di = mu.circular_integral_fast(D, cx, cy + 0.5, 8)/total_power#4096.0
-    ai = mu.circular_integral_fast(A, cx - 0.5, cy, 8)/total_power#4096.0
+    hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 3)/total_power#4096.0
+    vi = mu.circular_integral_fast(V, cx, cy, 3)/total_power#4096.0
+    di = mu.circular_integral_fast(D, cx, cy + 0.5, 3)/total_power#4096.0
+    ai = mu.circular_integral_fast(A, cx - 0.5, cy, 3)/total_power#4096.0
 
     print((cx, cy))
 
@@ -153,22 +167,23 @@ def update(dt):
 
     slm2.set_array(np.exp(1.0j*(np.pi*phase1 + (img*phase_rot*(phase2 - phase1)))))
     #slm2.set_location_center(slm2.screen_width/2, 65 + slm2.screen_height/2, 384, 384)
-    slm2.set_location_center(20 + (slm2.screen_width/2), 80 + (slm2.screen_height/2), 350, 350)
+    slm2.set_location_center(20 + (slm2.screen_width/2), 80 + (slm2.screen_height/2), 300, 300)
     slm2.disable_filter()
 
-    # fig.add_subplot(2, 2, 1)
-    # plt.imshow(H)
+    if show_cam:
+        fig.add_subplot(2, 2, 1)
+        plt.imshow(H)
 
-    # fig.add_subplot(2, 2, 2)
-    # plt.imshow(V)
+        fig.add_subplot(2, 2, 2)
+        plt.imshow(V)
 
-    # fig.add_subplot(2, 2, 3)
-    # plt.imshow(D)
+        fig.add_subplot(2, 2, 3)
+        plt.imshow(D)
 
-    # fig.add_subplot(2, 2, 4)
-    # plt.imshow(A)
+        fig.add_subplot(2, 2, 4)
+        plt.imshow(A)
 
-    # plt.pause(0.05)
+        plt.pause(0.05)
 
     print(count)
 
@@ -188,13 +203,16 @@ def on_window_close(window):
 
 pyglet.app.run()
 
-sp.savemat('D:/Alejandro/results/data_190814_run11.mat', {
+sp.savemat('D:/Alejandro/results/data_190815_run11.mat', {
     'H': np.array(H_list),
     'V': np.array(V_list),
     'D': np.array(D_list),
     'U': np.array(A_list),
     'masks': masks,
-    #'raw_image': img_list,
+    'H_img_list': H_img_list,
+    'V_img_list': V_img_list,
+    'D_img_list': D_img_list,
+    'A_img_list': A_img_list,
     'Nx': Nx,
     'Ny': Ny,
     'alpha': phase_rot,
