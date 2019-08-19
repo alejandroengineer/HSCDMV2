@@ -12,17 +12,22 @@ import scipy.io as sp
 
 show_cam = False
 
-Nx = 16*4
-Ny = 16*4
+save_datacube = False
 
-phase1 = 0.24
-phase2 = 1.21
+Nx = 16*6
+Ny = 16*6
+
+phase1 = 0.16
+phase2 = 1.19
 
 phase_rot = np.pi
 
 activation_ratio = 0.1
 
-Num_of_meas = int(Nx*Ny)
+target_exposure = 3000;
+exposure_tolerance = 400;
+
+Num_of_meas = int(Nx*Ny*0.4)
 
 threshold = 4
 
@@ -34,6 +39,8 @@ slm2 = SLM.SLM(1)
 
 slm.enable_blazed()
 slm2.enable_blazed()
+
+slm.set_k_vector(2.0*np.pi/17.0, 2.0*np.pi/11.0)
 
 slm2.set_k_vector(0, 0)
 slm2.disable_filter()
@@ -51,6 +58,8 @@ num_of_frames = 0
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
 #slm.set_zernike_coeffs([0, 0, 0, -0.17, -0.56, 0, -0.0844, 0.1055, 0.1055, -0.0844, 0, 0, 0], [0.75])
 slm.set_zernike_coeffs([0, 2.07, 4, -0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [1])
+#
+
 
 x = np.linspace(-1, 1, 128*4)
 y = np.linspace(-1, 1, 128*4)
@@ -64,8 +73,10 @@ phase_image = 2*np.pi*np_im[:, :, 1]/255.0
 
 pimg = np.exp(1.0j*phase_image)
 
-dist = (xx**2) + (yy**2)
-img = dist < 1
+dist = np.sqrt((xx**2) + (yy**2))
+imgx = abs(xx) < 0.6#
+imgy = abs(yy) < 0.6
+img = dist < 0.95#imgx*imgy
 min_size = min(slm.screen_height, slm.screen_width)*0.8
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
 slm.set_array(img.astype(float)*pimg)#np_im[:, :, 1]/255.0)#
@@ -80,13 +91,19 @@ V_list = []
 D_list = []
 A_list = []
 
-cw = int(cam.w/2)
-ch = int(cam.h/2)
+cw = int(cam.h/2)
+ch = int(cam.w/2)
 
-H_img_list = np.zeros((cw, ch, Num_of_meas))
-V_img_list = np.zeros((cw, ch, Num_of_meas))
-D_img_list = np.zeros((cw, ch, Num_of_meas))
-A_img_list = np.zeros((cw, ch, Num_of_meas))
+if save_datacube:
+    H_img_list = np.zeros((cw, ch, Num_of_meas))
+    V_img_list = np.zeros((cw, ch, Num_of_meas))
+    D_img_list = np.zeros((cw, ch, Num_of_meas))
+    A_img_list = np.zeros((cw, ch, Num_of_meas))
+else:
+    H_img_list = np.zeros((cw, ch, 1))
+    V_img_list = np.zeros((cw, ch, 1))
+    D_img_list = np.zeros((cw, ch, 1))
+    A_img_list = np.zeros((cw, ch, 1))
 
 masks = np.zeros((Num_of_meas, Nx*Ny))
 
@@ -103,12 +120,35 @@ def update(dt):
 
     print(pyglet.clock.get_fps())
 
+    if count == 2:
+        good_exposure = False
+        while good_exposure == False:
+            cam.fetch_buffer()
+            max_pixel = np.max(cam.raw_image)
+            if abs(max_pixel - target_exposure) > exposure_tolerance:
+                new_exposure = target_exposure*cam.exposure/max_pixel
+                print((max_pixel, new_exposure))
+                if new_exposure <= 10:
+                    break
+                if new_exposure >= 12078:
+                    break
+                cam.set_exposure(int(new_exposure))
+            else:
+                good_exposure = True
+            cam.queue_buffer()
+            time.sleep(0.2)
+        cam.fetch_buffer()
+        max_pixel = np.max(cam.raw_image)
+        print(max_pixel)
+        cam.queue_buffer()
+
+
     avg_num = 20
     skip_num = 6
 
-    raw_sum = np.zeros((cam.w, cam.h))
-    cw = int(cam.w/2)
-    ch = int(cam.h/2)
+    raw_sum = np.zeros((cam.h, cam.w))
+    cw = int(cam.h/2)
+    ch = int(cam.w/2)
     H_sum = np.zeros((cw, ch))
     V_sum = np.zeros((cw, ch))
     D_sum = np.zeros((cw, ch))
@@ -134,14 +174,15 @@ def update(dt):
 
     print(np.max(cam.raw_image))
 
-    H_img_list[:, :, count] = H
-    V_img_list[:, :, count] = V
-    D_img_list[:, :, count] = D
-    A_img_list[:, :, count] = A
+    if save_datacube:
+        H_img_list[:, :, count] = H
+        V_img_list[:, :, count] = V
+        D_img_list[:, :, count] = D
+        A_img_list[:, :, count] = A
 
     total_power = np.sum(V)
 
-    cx, cy = mu.center_cam(V, 0)
+    cx, cy = mu.center_cam(V, np.max(V)*0.7)
 
     hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 3)/total_power#4096.0
     vi = mu.circular_integral_fast(V, cx, cy, 3)/total_power#4096.0
@@ -158,7 +199,7 @@ def update(dt):
         D_list.append(di)
         A_list.append(ai)
     
-    if count > 4:
+    if count > 8:
         img = np.random.choice([0.0, 1.0], size = (Nx, Ny), p=[(1.0 - activation_ratio), activation_ratio])
 
     img_1d = np.reshape(img, (1, Nx*Ny))
@@ -203,7 +244,7 @@ def on_window_close(window):
 
 pyglet.app.run()
 
-sp.savemat('D:/Alejandro/results/data_190815_run11.mat', {
+sp.savemat('D:/Alejandro/results/data_190819_run10.mat', {
     'H': np.array(H_list),
     'V': np.array(V_list),
     'D': np.array(D_list),
@@ -216,7 +257,8 @@ sp.savemat('D:/Alejandro/results/data_190815_run11.mat', {
     'Nx': Nx,
     'Ny': Ny,
     'alpha': phase_rot,
-    'activation': activation_ratio
+    'activation': activation_ratio,
+    'contains_datacube': save_datacube
     })
 
 cam.__del__()

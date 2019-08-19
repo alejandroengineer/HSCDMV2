@@ -69,8 +69,8 @@ class SLM(pyglet.window.Window):
         gl_enable_filtering()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
 
-        self.Ab_width = int(self.screen_width/8)
-        self.Ab_height = int(self.screen_height/8)
+        self.Ab_width = int(self.screen_width)
+        self.Ab_height = int(self.screen_height)
 
         self.Ab_mode = 'center'
         

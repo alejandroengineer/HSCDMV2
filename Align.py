@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 
 from instrumental import instrument, list_instruments
 
-num_of_coeffs = 20
-first_coeff = 1
+num_of_coeffs = 10
+first_coeff = 3
 
 dx = 0.05
 step = 0.5
@@ -36,10 +36,7 @@ cam.gain_boost = False
 
 #cam.start_live_video(framerate = '60 hertz', exposure_time='0.05 millisecond')
 
-current_coeffs = [0.1338858,  -0.04361271,  0.0405758, -0.54168096, -0.05750595,
- -0.06092065,  0.27694177,  0.06299513, -0.14471439,  0.05366629,  0.09215891,
- -0.34178976,  0.39306562,  0.20678763,  0.08826728,  0.02828799, -0.02992248,
- -0.10104176, -0.07010867, -0.02751629]
+current_coeffs = [-0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0]
 #slm.set_zernike_coeffs([0, 0, 0, -0.3, 0, 0, -0.2, 0.25, 0.25, -0.2, 0, 0, 0], [0.75])
 tmp = [0]
 tmp.extend(current_coeffs)
