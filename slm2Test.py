@@ -4,8 +4,8 @@ import glfw
 
 SLM2.init()
 
-slm = SLM2.SLM(0)
-slm2 = SLM2.SLM(0)
+slm = SLM2.SLM(1)
+slm2 = SLM2.SLM(3)
 
 slm.enable_blazed()
 

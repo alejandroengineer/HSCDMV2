@@ -14,8 +14,12 @@ show_cam = False
 
 save_datacube = False
 
-Nx = 16*6
-Ny = 16*6
+raster_scan = True
+
+start_frame = 4
+
+Nx = 16*2
+Ny = 16*2
 
 phase1 = 0.16
 phase2 = 1.19
@@ -27,7 +31,7 @@ activation_ratio = 0.1
 target_exposure = 3000;
 exposure_tolerance = 400;
 
-Num_of_meas = int(Nx*Ny*0.4)
+Num_of_meas = int(Nx*Ny) + start_frame
 
 threshold = 4
 
@@ -65,19 +69,20 @@ x = np.linspace(-1, 1, 128*4)
 y = np.linspace(-1, 1, 128*4)
 xx, yy = np.meshgrid(x, y)
 
-im = Image.open("logo_ramps_512.png")#"Star.png")#"logo_radial_ramp_512.png")#"abc.png")
+im = Image.open("USFGrayScale.png")#logo_ramps_512.png")#"Star.png")#"logo_radial_ramp_512.png")#"abc.png")
 #im = im.filter(ImageFilter.BLUR)
 np_im = np.array(im)
 
-phase_image = 2*np.pi*np_im[:, :, 1]/255.0
+phase_image = 2.0*np.pi*np_im[:, :, 1]/255.0
 
 pimg = np.exp(1.0j*phase_image)
 
 dist = np.sqrt((xx**2) + (yy**2))
 imgx = abs(xx) < 0.6#
 imgy = abs(yy) < 0.6
-img = dist < 0.95#imgx*imgy
-min_size = min(slm.screen_height, slm.screen_width)*0.8
+#img = dist < 0.95
+img = phase_image > 0.01#imgx*imgy
+min_size = min(slm.screen_height, slm.screen_width)
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
 slm.set_array(img.astype(float)*pimg)#np_im[:, :, 1]/255.0)#
 slm.enable_filter()
@@ -184,10 +189,15 @@ def update(dt):
 
     cx, cy = mu.center_cam(V, np.max(V)*0.7)
 
-    hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 3)/total_power#4096.0
+    # hi = mu.circular_integral_fast(H, cx - 0.5, cy + 0.5, 3)/total_power#4096.0
+    # vi = mu.circular_integral_fast(V, cx, cy, 3)/total_power#4096.0
+    # di = mu.circular_integral_fast(D, cx, cy + 0.5, 3)/total_power#4096.0
+    # ai = mu.circular_integral_fast(A, cx - 0.5, cy, 3)/total_power#4096.0
+
+    hi = mu.circular_integral_fast(H, cx, cy, 3)/total_power#4096.0
     vi = mu.circular_integral_fast(V, cx, cy, 3)/total_power#4096.0
-    di = mu.circular_integral_fast(D, cx, cy + 0.5, 3)/total_power#4096.0
-    ai = mu.circular_integral_fast(A, cx - 0.5, cy, 3)/total_power#4096.0
+    di = mu.circular_integral_fast(D, cx, cy, 3)/total_power#4096.0
+    ai = mu.circular_integral_fast(A, cx, cy, 3)/total_power#4096.0
 
     print((cx, cy))
 
@@ -199,8 +209,13 @@ def update(dt):
         D_list.append(di)
         A_list.append(ai)
     
-    if count > 8:
-        img = np.random.choice([0.0, 1.0], size = (Nx, Ny), p=[(1.0 - activation_ratio), activation_ratio])
+    if count >= start_frame:
+        if raster_scan:
+            img_1d = np.zeros(Nx * Ny)
+            img_1d[count - start_frame] = 1.0
+            img = np.reshape(img_1d, (Nx, Ny))
+        else:
+            img = np.random.choice([0.0, 1.0], size = (Nx, Ny), p=[(1.0 - activation_ratio), activation_ratio])
 
     img_1d = np.reshape(img, (1, Nx*Ny))
 
@@ -244,7 +259,7 @@ def on_window_close(window):
 
 pyglet.app.run()
 
-sp.savemat('D:/Alejandro/results/data_190819_run10.mat', {
+sp.savemat('D:/Alejandro/results/data_190821_run3.mat', {
     'H': np.array(H_list),
     'V': np.array(V_list),
     'D': np.array(D_list),
@@ -256,6 +271,7 @@ sp.savemat('D:/Alejandro/results/data_190819_run10.mat', {
     'A_img_list': A_img_list,
     'Nx': Nx,
     'Ny': Ny,
+    'start_frame' : start_frame,
     'alpha': phase_rot,
     'activation': activation_ratio,
     'contains_datacube': save_datacube

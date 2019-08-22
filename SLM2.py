@@ -28,10 +28,15 @@ class SLM:
         self.monitor_id = monitor_id
         monitors = glfw.get_monitors()
         video_mode = glfw.get_video_mode(monitors[monitor_id])
-        self.screen_width = int(video_mode.size.width/2)
-        self.screen_height = int(video_mode.size.height/2)
+        self.screen_width = int(video_mode.size.width)
+        self.screen_height = int(video_mode.size.height)
 
-        self.window = glfw.create_window(self.screen_width, self.screen_height, "SLM Window", None, None)#monitors[monitor_id], None)
+        glfw.window_hint(glfw.AUTO_ICONIFY, glfw.FALSE)
+        glfw.window_hint(glfw.CENTER_CURSOR, glfw.FALSE)
+
+        self.window = glfw.create_window(self.screen_width, self.screen_height, "SLM Window", monitors[monitor_id], None)
+
+        glfw.set_input_mode(self.window, glfw.CURSOR, glfw.CURSOR_HIDDEN)
 
         self.make_current()
 
