@@ -20,6 +20,14 @@ def gl_disable_filtering(): #useful function for disableing filtering of the ima
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 
+def gl_create_texture(array, type, channels):
+    glEnable(GL_TEXTURE_2D)
+    texture = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture)
+    gl_enable_filtering()
+    glTexImage2D(GL_TEXTURE_2D, 0, type, np.size(array, 1), np.size(array, 0), 0, channels, GL_FLOAT, array)
+    return texture
+
 def init():
     glfw.init()
 
@@ -44,18 +52,10 @@ class SLM:
         self.set_location(0, 0, self.screen_width, self.screen_height)
 
         self.data = np.zeros((64, 64))
-        glEnable(GL_TEXTURE_2D)
-        self.texture = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.texture)
-        gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.data, 0), np.size(self.data, 1), 0, GL_RED, GL_FLOAT, self.data)
+        self.texture = gl_create_texture(self.data, GL_R32F, GL_RED)
         
         self.zero_tex = np.zeros((64, 64))
-        glEnable(GL_TEXTURE_2D)
-        self.GL_zero_tex = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.GL_zero_tex)
-        gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, np.size(self.zero_tex, 0), np.size(self.zero_tex, 1), 0, GL_RED, GL_FLOAT, self.zero_tex)
+        self.GL_zero_tex = gl_create_texture(self.zero_tex, GL_R32F, GL_RED)
         
         inv_sinc = np.vectorize(inverse_sinc)
 
@@ -68,16 +68,10 @@ class SLM:
 
         self.cal_A = np.zeros((64, 64, 4))
         self.cal_A[:, :, 1] = 0.5/np.pi;
-        self.GL_cal_A = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.GL_cal_A)
-        gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_A, 1), np.size(self.cal_A, 0), 0, GL_RGBA, GL_FLOAT, self.cal_A)
+        self.GL_cal_A = gl_create_texture(self.cal_A, GL_RGBA32F, GL_RGBA)
 
         self.cal_B = np.zeros((64, 64, 4))
-        self.GL_cal_B = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.GL_cal_B)
-        gl_enable_filtering()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, np.size(self.cal_B, 1), np.size(self.cal_B, 0), 0, GL_RGBA, GL_FLOAT, self.cal_B)
+        self.GL_cal_B = gl_create_texture(self.cal_B, GL_RGBA32F, GL_RGBA)
 
         self.Ab_width = int(self.screen_width)
         self.Ab_height = int(self.screen_height)
@@ -119,7 +113,6 @@ class SLM:
             self.shader = None
 
     def set_k_vector(self, kx, ky):
-        self.make_current()
         self.make_current()
         self.dir_vector = (kx, ky)
         self.shader.use()
@@ -272,5 +265,3 @@ class SLM:
 
         if self.shader != None:
             self.shader.clear()
-
-        self.swap_buffers()

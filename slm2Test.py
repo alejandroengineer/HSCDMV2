@@ -4,8 +4,8 @@ import glfw
 
 SLM2.init()
 
-slm = SLM2.SLM(1)
-slm2 = SLM2.SLM(3)
+slm = SLM2.SLM(3)
+slm2 = SLM2.SLM(2)
 
 slm.enable_blazed()
 
@@ -21,9 +21,16 @@ slm.set_array(img.astype(float))
 min_size = min(slm.screen_height, slm.screen_width)
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
 
+slm.draw()
+slm.swap_buffers()
+
 while not glfw.window_should_close(slm.window):
-    slm.draw()
+    slm2.set_array(np.zeros((16, 16)))
     slm2.draw()
+    slm2.swap_buffers()
+    slm2.set_array(np.ones((16, 16)))
+    slm2.draw()
+    slm2.swap_buffers()
     glfw.poll_events()
 
 glfw.terminate()
