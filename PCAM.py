@@ -61,6 +61,13 @@ class PCAM:
 
     def start(self):
         self.ia.start_image_acquisition()
+    
+    def stop(self):
+        self.ia.stop_image_acquisition()
+
+    def restart(self):
+        self.stop()
+        self.start()
 
     def fetch_buffer(self):
         self.buffer = self.ia.fetch_buffer()

@@ -152,3 +152,85 @@ def circular_integral(input, cx, cy, r):
     norm = np.sum(mask.astype(float))
 
     return np.sum(np.sum(mask*input/norm))
+
+def data_norm(data):
+    num_of_samples = np.size(data)
+
+    mean = np.sum(data)/num_of_samples
+
+    std_dev = np.sqrt(np.sum((data - mean)**2))/num_of_samples
+
+    return mean, std_dev
+
+def solveDM(Ih, Iv, Id, Iu, alpha):
+    a1 = Ih - Iv;
+    a2 = Id - Iu;
+    a3 = Ih+Iv+Id+Iu;
+
+    br = (-(4*a1**2 + 4*a2**2 - a3**2)/(2*a1 + a3))**(1/2)/2 + (2*a1 + a3)**(1/2)/2
+    gr = (2*a1 + a3)**(1/2)/2 - (-(4*a1**2 + 4*a2**2 - a3**2)/(2*a1 + a3))**(1/2)/2
+    gi = a2/(2*a1 + a3)**(1/2)
+
+    beta = br - 1.0j*gi
+    gamma = gr + 1.0j*gi
+
+    B = gamma/(1 - np.exp(1.0j*alpha))
+    A = (beta - (1 + np.exp(1.0j*alpha))*B)/2
+
+    return A, B
+
+def bit_location(i):
+    for n in range(32):
+        if i >> n == 1:
+            return n
+    return 32
+
+def swap_even_odd_bits(i):
+    i = int(i)
+    a = int(715827882)
+    b = int(357913941)
+
+    even = i&a
+    odd = i&b
+
+    return (even>>1)|(odd<<1)
+
+def bit_reverse(i, N):
+    out = i&(~((1<<N) - 1))
+    for n in range(N):
+        out = out|(((i>>n)&1) << (N - n - 1))
+    return out
+
+def stripe_bits(i, slice):
+    out = 0
+    for n in range(slice):
+        out = out|((((i>>n)&1)|((i>>(n+slice-1))&2))<<(n<<1))
+    return out
+
+def hadamard_element(i, j, N):
+    i = int(i)
+    j = int(j)
+    out = i&j
+    n = 1
+    while n < N:
+        out = out ^ (out>>n)
+        n = n<<1
+    return out&1
+
+def hadamard(N):
+    out = np.ones((N, N))
+    logN = bit_location(N)
+    for i in range(N):
+        for j in range(N):
+            out[i, j] = hadamard_element(i, j, logN)
+    return out
+
+def hadamard_masks(size):   #returns a hadamard matrix for square image of width size
+    N = size*size
+    out = np.ones((N, N))
+    logN = bit_location(N)
+    for i in range(N):
+        i_ = swap_even_odd_bits(bit_reverse(i, logN))
+        for j in range(N):
+            out[i, j] = hadamard_element(i, j, logN)#stripe_bits(j, logN>>1)
+    return out

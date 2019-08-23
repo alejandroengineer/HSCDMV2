@@ -155,6 +155,9 @@ class SLM:
         self.w = 2.0*w/self.screen_width
         self.h = 2.0*h/self.screen_height
 
+    def set_centered_size(self, w, h):  #sets the location to be centered in the display, and specifies the dimensions only
+        self.set_location_center(self.screen_width/2, self.screen_height/2, w, h)
+
     def set_dir(self, dx, dy):
         self.make_current()
         self.dir_vector = (dx, dy);
@@ -242,10 +245,10 @@ class SLM:
             glActiveTexture(GL_TEXTURE0 + 4)
             glBindTexture(GL_TEXTURE_2D, self.GL_sinc_lut)
 
-            x = 0
-            y = 0
-            w = self.screen_width
-            h = self.screen_height
+            x = -1
+            y = -1
+            w = 2
+            h = 2
 
             pyglet.graphics.draw_indexed(4, pyglet.gl.GL_TRIANGLES, [0, 1, 2, 0, 2, 3],
                 ('v2f', (x, y, x+w, y, x+w, y+h, x, y+h)),
