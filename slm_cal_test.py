@@ -38,10 +38,10 @@ dist = (xx**2) + (yy**2)
 img = dist < 1.0
 min_size = min(slm.screen_height, slm.screen_width)
 slm.set_location_center(slm.screen_width/2, slm.screen_height/2, min_size, min_size)
-slm.set_array(img)
+slm.set_array(img*0.75)
 slm.enable_filter()
 
-img = np.ones((64, 64)) * np.exp(1.0j*np.pi*0.16)#0.7)#*0.19)#1.21)#1.16#0.24 1.19
+img = np.ones((64, 64)) * np.exp(1.0j*np.pi*0.18)#0.7)#*0.19)#1.21)#1.16#0.24 1.19
 slm2.set_array(img)
 slm2.set_location_center(slm2.screen_width/2, slm2.screen_height/2, slm2.screen_width, slm2.screen_height)
 
@@ -58,6 +58,7 @@ def update(dt):
     w = np.size(Ih_2d, 0)
     h = np.size(Ih_2d, 1)
     num = float(w*h)
+    print(np.max(cam.raw_image))
     print("H: %f V: %f D: %f A: %f" % (np.sum(Ih_2d)/num, np.sum(Iv_2d)/num, np.sum(Id_2d)/num, np.sum(Ia_2d)/num))
     print("H/V: %f D/A: %f" % (np.sum(Ih_2d)/np.sum(Iv_2d), np.sum(Id_2d)/np.sum(Ia_2d)))
 

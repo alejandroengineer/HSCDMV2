@@ -90,7 +90,6 @@ class SLM:
         self.make_current()
         try:
             self.shader = from_files_names(vert, frag)
-            print(self.shader.uniforms)
             self.tex_Loc = glGetUniformLocation(self.shader.pid, 'tex')
             self.cal_A_Loc = glGetUniformLocation(self.shader.pid, 'calA')
             self.cal_B_Loc = glGetUniformLocation(self.shader.pid, 'calB')

@@ -30,9 +30,10 @@ def automatic_exposure(cam, target_exposure, exposure_tolerance):
 def automatic_exposure_and_framing(cam, size, target_exposure, exposure_tolerance):
     cam.set_binning()
     cam.set_pixel_format('Mono12')
-    cam.set_exposure(100)
+    cam.set_exposure(50)
     cam.set_offset(int(0), int(0))
     cam.set_size(int(cam.sensor_width), int(cam.sensor_height))
+    time.sleep(0.2)
     cam.restart()
     automatic_exposure(cam, target_exposure, exposure_tolerance)
     x = 0
@@ -48,29 +49,44 @@ def automatic_exposure_and_framing(cam, size, target_exposure, exposure_toleranc
         cam.set_size(int(size), int(size))
         cam.set_offset(int(x), int(y))
 
+def automatic_phase_noQWP(cam, slm):
+    phase = 0
+
+    slm.set_array(np.ones((64, 64))*np.exp(1.0j*phase))
+    slm.draw()
+    slm.swap_buffers()
+
+    time.sleep(0.1)
+
+    cam.fetch_buffer()
+    H, V, D, A = cam.get_pol()
+    value = np.sum(D)/np.sum(A)
+
 def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.16):
-    slm.set_array(0.25*np.ones((64, 64)))
+    slm.set_array(0.5*np.ones((64, 64)))
     slm.set_centered_size(size, size)
     slm.draw()
     slm.swap_buffers()
 
     time.sleep(0.2)
 
-    slm2_size = size*size_ratio/2.0
+    slm2_size = size*size_ratio
+    scan_size = slm2_size/2
 
-    num_regions_x = int(np.floor(slm2.screen_width/slm2_size)+1)
-    num_regions_y = int(np.floor(slm2.screen_height/slm2_size)+1)
+    num_regions_x = int(np.floor(slm2.screen_width/scan_size)+1)
+    num_regions_y = int(np.floor(slm2.screen_height/scan_size)+1)
 
-    automatic_exposure(cam, 2500, 200)
+    automatic_exposure_and_framing(cam, 400, 3200, 200)
 
     a_values = np.zeros((num_regions_x, num_regions_y), 'complex')
     b_values = np.zeros((num_regions_x, num_regions_y), 'complex')
+    d_values = np.zeros((num_regions_x, num_regions_y))
 
     slm2.set_array(np.ones((64, 64))*np.exp(1.0j*phase))
 
     for i in range(num_regions_x):
         for j in range(num_regions_y):
-            slm2.set_location(i*slm2_size, j*slm2_size, slm2_size, slm2_size)
+            slm2.set_location(i*scan_size, j*scan_size, scan_size, scan_size)
             slm2.draw()
             slm2.swap_buffers()
             time.sleep(0.1)
@@ -86,27 +102,34 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
             a_values[i][j] = a
             b_values[i][j] = b
+            d_values[i][j] = A_value
 
             cam.queue_buffer()
 
     max_b_value = np.max(b_values)
     b_magnitudes = np.absolute(b_values)
-    x, y = mu.center_cam(b_magnitudes, max_b_value*0.1)
+    x, y = mu.center_cam(b_magnitudes, max_b_value*0.5)
 
-    x = x*slm2_size
-    y = y*slm2_size
+    x = x*scan_size
+    y = y*scan_size
 
     print((x, y))
 
-    slm2.set_location_center(x, y, slm2_size*2, slm2_size*2)
+    #slm2.set_location_center(x, y, slm2_size*2, slm2_size*2)
+    slm2.set_location(0, 0, slm2.screen_width, slm2.screen_height)
 
-    region_size = 16
+    region_size = 8
     num_of_samples = region_size**2
 
     hadamard = mu.hadamard_masks(region_size)
     hadamard = hadamard.astype('float')
 
     b_vector = np.zeros(num_of_samples, 'complex')
+
+    cam.fetch_buffer()
+    H, V, D, A = cam.get_pol()
+    center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
+    cam.queue_buffer()
 
     for i in range(num_of_samples):
         slm2.set_array(np.exp(1.0j*(phase_low*np.pi + (phase - phase_low*np.pi)*np.reshape(hadamard[i], (region_size, region_size)))))
@@ -116,11 +139,12 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
         time.sleep(0.1)
         cam.fetch_buffer()
         H, V, D, A = cam.get_pol()
-        center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
         H_value = mu.circular_integral(H, center_x, center_y, 4)
         V_value = mu.circular_integral(V, center_x, center_y, 4)
         D_value = mu.circular_integral(D, center_x, center_y, 4)
         A_value = mu.circular_integral(A, center_x, center_y, 4)
+
+        D_value2 = D_value
 
         cam.queue_buffer()
 
@@ -153,4 +177,4 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     final_img = np.reshape(np.matmul(hadamard_t, b_vector), (region_size, region_size))
 
-    return x, y, b_values, final_img
+    return x, y, d_values, final_img, b_values

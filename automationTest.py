@@ -47,7 +47,7 @@ slm.swap_buffers()
 
 #au.automatic_exposure_and_framing(cam, 400, 3400, 200)
 
-x, y, tmp, b_img = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2)
+x, y, tmp, b_img, tmp2 = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2)
 
 fig=plt.figure(figsize=(2, 2))
 
@@ -58,10 +58,10 @@ fig.add_subplot(2, 2, 1)
 plt.imshow(np.abs(b_img))
 
 fig.add_subplot(2, 2, 2)
-plt.imshow(V)
+plt.imshow(np.abs(tmp))
 
 fig.add_subplot(2, 2, 3)
-plt.imshow(D)
+plt.imshow(np.abs(tmp2))
 
 fig.add_subplot(2, 2, 4)
 plt.imshow(A)
