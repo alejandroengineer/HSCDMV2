@@ -27,16 +27,35 @@ if num_cameras > 0:
     acquisition_mode_continuous = node_acquisition_mode_continuous.GetValue()
     node_acquisition_mode.SetIntValue(acquisition_mode_continuous)
 
+    cam.Width.SetValue(100)
+    cam.Height.SetValue(100)
+
+    if cam.PixelFormat.GetAccessMode() == PySpin.RW:
+        print('able to change the format\n')
+        print(cam.PixelFormat.GetValue())
+        cam.PixelFormat.SetValue("Mono12")
+    else:
+        print('not able to change the format\n')
+
+    cam.GainAuto.SetValue("Off")
+    cam.Gain.SetValue(1.0)
+
     cam.BeginAcquisition()
 
     for n in range(1000):
         acqdFrame = cam.GetNextImage()
 
         #fig.add_subplot(2, 2, 1)
-        plt.imshow(np.array(acqdFrame.GetData(), dtype="uint8").reshape( (acqdFrame.GetHeight(), acqdFrame.GetWidth()) ))
+        data = np.array(acqdFrame.GetData(), dtype="uint8").reshape( (acqdFrame.GetHeight(), acqdFrame.GetWidth()) )
+
+        plt.imshow(data[::11, ::11], interpolation='nearest')
         plt.pause(0.05)
 
-    acqdFrame.Release()
+        print('\nlargest value: %d\n' %np.max(data))
+
+        print(n)
+
+        acqdFrame.Release()
 
     cam.EndAcquisition()
 
