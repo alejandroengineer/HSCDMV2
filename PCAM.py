@@ -32,7 +32,7 @@ class PCAM:
         self.ia.destroy()
         self.H.reset()
     
-    def set_pixel_format(self, format):
+    def set_pixel_format(self, format = 'Mono12'):
         self.format = format
         self.ia.device.node_map.PixelFormat.value = format
 

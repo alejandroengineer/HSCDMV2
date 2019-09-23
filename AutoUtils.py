@@ -28,8 +28,7 @@ def automatic_exposure(cam, target_exposure, exposure_tolerance):
     cam.queue_buffer()
 
 def automatic_exposure_and_framing(cam, size, target_exposure, exposure_tolerance):
-    cam.set_binning()
-    cam.set_pixel_format('Mono12')
+    cam.set_pixel_format()
     cam.set_exposure(50)
     cam.set_offset(int(0), int(0))
     cam.set_size(int(cam.sensor_width), int(cam.sensor_height))

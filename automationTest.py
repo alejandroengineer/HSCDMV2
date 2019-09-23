@@ -1,4 +1,4 @@
-import PCAM
+import PCAM2
 import SLM2
 import AutoUtils as au
 import matplotlib.pyplot as plt
@@ -26,7 +26,7 @@ slm2.load_calibration("D:\Alejandro\slm cals\H4_cal.mat")
 
 slm.set_zernike_coeffs([0, 2.07, 4, -0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [1])
 
-cam = PCAM.PCAM()
+cam = PCAM2.PCAM()
 cam.start()
 
 x = np.linspace(-1, 1, 128*4)
