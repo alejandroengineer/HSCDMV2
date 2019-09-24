@@ -1,7 +1,7 @@
 import numpy as np
 import pyglet
 import SLM
-import PCAM as pc
+import PCAM2 as pc
 import time
 import MathUtils as mu
 import matplotlib.pyplot as plt
@@ -14,7 +14,7 @@ show_cam = False
 
 save_datacube = False
 
-raster_scan = True
+raster_scan = False
 
 start_frame = 4
 
@@ -28,8 +28,8 @@ phase_rot = np.pi
 
 activation_ratio = 0.1
 
-target_exposure = 3000;
-exposure_tolerance = 400;
+target_exposure = 3000*16;
+exposure_tolerance = 400*16;
 
 Num_of_meas = int(Nx*Ny) + start_frame
 

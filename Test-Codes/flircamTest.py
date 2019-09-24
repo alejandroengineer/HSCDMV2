@@ -49,10 +49,11 @@ if num_cameras > 0:
     cam.GainAuto.SetValue(PySpin.GainAuto_Off)
     cam.Gain.SetValue(1.0)
 
+    cam.AdcBitDepth.SetIntValue(2)
+
+    cam.ExposureAuto.SetIntValue(0)
     cam.ExposureMode.SetIntValue(1)
     cam.ExposureTime.SetValue(10000)
-
-    cam.AdcBitDepth.SetIntValue(2)
 
     print((cam.SensorWidth.GetValue(), cam.SensorHeight.GetValue()))
 

@@ -11,14 +11,18 @@ class PCAM:
         self.cam.Init()
         self.cam.BeginAcquisition()
         self.cam.EndAcquisition()
+
+        self.cam.ReverseX.SetValue(True)
+        self.cam.ReverseY.SetValue(False)
+
         self.nodemap = self.cam.GetNodeMap()
 
         self.x = self.cam.OffsetX.GetValue()
         self.y = self.cam.OffsetY.GetValue()
         self.w = self.cam.Width.GetValue()
         self.h = self.cam.Height.GetValue()
-        self.sensor_width = self.cam.SensorWidth.GetValue()
-        self.sensor_height = self.cam.SensorHeight.GetValue()
+        self.sensor_width = self.cam.SensorWidth.GetValue() - 16
+        self.sensor_height = self.cam.SensorHeight.GetValue() - 8
         self.exposure = 10000
         self.buffer = None
         self.raw_image = None
@@ -70,21 +74,25 @@ class PCAM:
         self.y = y
         if self.capturing:
             self.stop()
-            self.cam.OffsetX.SetValue(32)
-            self.cam.OffsetY.SetValue(32)
+            self.cam.OffsetX.SetValue(x)
+            self.cam.OffsetY.SetValue(y)
             self.start()
         else:
-            self.cam.OffsetX.SetValue(32)
-            self.cam.OffsetY.SetValue(32)
+            self.cam.OffsetX.SetValue(x)
+            self.cam.OffsetY.SetValue(y)
 
     def set_exposure(self, exposure): #done         #sets exposure time in uS
         self.exposure = exposure
         if self.capturing:
             self.stop()
+            self.cam.GainAuto.SetIntValue(0)
+            self.cam.Gain.SetValue(0)
+            self.cam.ExposureAuto.SetIntValue(0)
             self.cam.ExposureMode.SetIntValue(1)
             self.cam.ExposureTime.SetValue(exposure)
             self.start()
         else:
+            self.cam.ExposureAuto.SetIntValue(0)
             self.cam.ExposureMode.SetIntValue(1)
             self.cam.ExposureTime.SetValue(exposure)
 
@@ -102,6 +110,7 @@ class PCAM:
 
     def fetch_buffer(self): #done
         self.buffer = self.cam.GetNextImage()
+        #print(self.buffer.GetTimeStamp())
         self.raw_image = np.array(self.buffer.GetData(), dtype="uint64").reshape( (self.buffer.GetHeight(), self.buffer.GetWidth()) )
         return self.raw_image
 
@@ -126,5 +135,8 @@ class PCAM:
         return self.Hi, self.Vi, self.Di, self.Ai
 
     def queue_buffer(self): #done
-        self.buffer.Release()
-        self.buffer = None
+        try:
+            self.buffer.Release()
+            self.buffer = None
+        except:
+            print('No Buffer!\n')

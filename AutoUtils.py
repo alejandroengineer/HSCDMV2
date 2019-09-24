@@ -43,8 +43,8 @@ def automatic_exposure_and_framing(cam, size, target_exposure, exposure_toleranc
         cam.queue_buffer()
         x = x + dx - (size/2)
         y = y + dy - (size/2)
-        x = min(max(np.floor(x/2)*2, 0), cam.sensor_width - size)
-        y = min(max(np.floor(y/2)*2, 0), cam.sensor_height - size)
+        x = min(max(np.floor(x/4)*4, 0), cam.sensor_width - size)
+        y = min(max(np.floor(y/4)*4, 0), cam.sensor_height - size)
         cam.set_size(int(size), int(size))
         cam.set_offset(int(x), int(y))
 
@@ -61,21 +61,21 @@ def automatic_phase_noQWP(cam, slm):
     H, V, D, A = cam.get_pol()
     value = np.sum(D)/np.sum(A)
 
-def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.16):
-    slm.set_array(0.5*np.ones((64, 64)))
+def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.16*np.pi):
+    slm.set_array(0.75*np.ones((64, 64)))
     slm.set_centered_size(size, size)
     slm.draw()
     slm.swap_buffers()
 
-    time.sleep(0.2)
+    time.sleep(0.1)
 
     slm2_size = size*size_ratio
-    scan_size = slm2_size/2
+    scan_size = slm2_size/4
 
     num_regions_x = int(np.floor(slm2.screen_width/scan_size)+1)
     num_regions_y = int(np.floor(slm2.screen_height/scan_size)+1)
 
-    automatic_exposure_and_framing(cam, 400, 3200, 200)
+    automatic_exposure_and_framing(cam, 800, 3200*16, 200*16)
 
     a_values = np.zeros((num_regions_x, num_regions_y), 'complex')
     b_values = np.zeros((num_regions_x, num_regions_y), 'complex')
@@ -83,12 +83,33 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     slm2.set_array(np.ones((64, 64))*np.exp(1.0j*phase))
 
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+
     for i in range(num_regions_x):
         for j in range(num_regions_y):
             slm2.set_location(i*scan_size, j*scan_size, scan_size, scan_size)
             slm2.draw()
             slm2.swap_buffers()
-            time.sleep(0.1)
+            time.sleep(0.025)
+            cam.fetch_buffer()
+            cam.queue_buffer()
+            cam.fetch_buffer()
+            cam.queue_buffer()
+            cam.fetch_buffer()
+            cam.queue_buffer()
+            cam.fetch_buffer()
+            cam.queue_buffer()
+            cam.fetch_buffer()
+            cam.queue_buffer()
             cam.fetch_buffer()
             H, V, D, A = cam.get_pol()
             center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
@@ -97,7 +118,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
             D_value = mu.circular_integral(D, center_x, center_y, 5)
             A_value = mu.circular_integral(A, center_x, center_y, 5)
 
-            a, b = mu.solveDM(H_value, V_value, D_value, A_value, np.pi)
+            a, b = mu.solveDM(H_value, V_value, D_value, A_value, phase - phase_low)
 
             a_values[i][j] = a
             b_values[i][j] = b
@@ -105,17 +126,17 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
             cam.queue_buffer()
 
-    max_b_value = np.max(b_values)
     b_magnitudes = np.absolute(b_values)
+    max_b_value = np.max(b_magnitudes)
     x, y = mu.center_cam(b_magnitudes, max_b_value*0.5)
 
-    x = x*scan_size
-    y = y*scan_size
+    x = (x+0.5)*scan_size
+    y = (y+0.5)*scan_size
 
     print((x, y))
 
-    #slm2.set_location_center(x, y, slm2_size*2, slm2_size*2)
-    slm2.set_location(0, 0, slm2.screen_width, slm2.screen_height)
+    slm2.set_location_center(x, y, slm2_size*1.25, slm2_size*1.25)
+    #slm2.set_location(0, 0, slm2.screen_width, slm2.screen_height)
 
     region_size = 8
     num_of_samples = region_size**2
@@ -130,12 +151,33 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
     cam.queue_buffer()
 
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+    cam.fetch_buffer()
+    cam.queue_buffer()
+
     for i in range(num_of_samples):
-        slm2.set_array(np.exp(1.0j*(phase_low*np.pi + (phase - phase_low*np.pi)*np.reshape(hadamard[i], (region_size, region_size)))))
+        slm2.set_array(np.exp(1.0j*(phase_low + (phase - phase_low)*np.reshape(hadamard[i], (region_size, region_size)))))
         slm2.disable_filter()
         slm2.draw()
         slm2.swap_buffers()
-        time.sleep(0.1)
+        time.sleep(0.025)
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
         cam.fetch_buffer()
         H, V, D, A = cam.get_pol()
         H_value = mu.circular_integral(H, center_x, center_y, 4)
@@ -149,13 +191,23 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         HVtoDA = (H_value+V_value)/(D_value+A_value)
 
-        a1, b1 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, np.pi)
+        a1, b1 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase - phase_low)
 
-        slm2.set_array(np.exp(1.0j*(phase_low*np.pi + (phase - phase_low*np.pi)*np.reshape(1.0 - hadamard[i], (region_size, region_size)))))
+        slm2.set_array(np.exp(1.0j*(phase_low + (phase - phase_low)*np.reshape(1.0 - hadamard[i], (region_size, region_size)))))
         slm2.disable_filter()
         slm2.draw()
         slm2.swap_buffers()
-        time.sleep(0.1)
+        time.sleep(0.025)
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
+        cam.fetch_buffer()
+        cam.queue_buffer()
         cam.fetch_buffer()
         H, V, D, A = cam.get_pol()
         center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
@@ -166,9 +218,9 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         HVtoDA = (H_value+V_value)/(D_value+A_value)
 
-        a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, np.pi)
+        a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase - phase_low)
 
-        b_vector[i] = b1 - a1 - b2 + a2
+        b_vector[i] = b1 - b2
 
         cam.queue_buffer()
 

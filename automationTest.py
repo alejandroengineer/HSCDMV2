@@ -4,8 +4,8 @@ import AutoUtils as au
 import matplotlib.pyplot as plt
 import numpy as np
 
-phase1 = 0.16
-phase2 = 1.19
+phase1 = 0.21
+phase2 = 1.19 - 0.5
 
 SLM2.init()
 
@@ -47,7 +47,7 @@ slm.swap_buffers()
 
 #au.automatic_exposure_and_framing(cam, 400, 3400, 200)
 
-x, y, tmp, b_img, tmp2 = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2)
+x, y, tmp, b_img, tmp2 = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2, np.pi*phase1)
 
 fig=plt.figure(figsize=(2, 2))
 
