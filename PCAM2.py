@@ -12,6 +12,8 @@ class PCAM:
         self.cam.BeginAcquisition()
         self.cam.EndAcquisition()
 
+        self.cam.AcquisitionMode.SetValue(PySpin.AcquisitionMode_SingleFrame)
+
         self.cam.ReverseX.SetValue(True)
         self.cam.ReverseY.SetValue(False)
 
@@ -31,6 +33,7 @@ class PCAM:
         self.Di = None
         self.Ai = None
 
+        self.darkframe = np.zeros((1, 1))
         self.capturing = False
 
     def __del__(self):  #done
@@ -108,10 +111,40 @@ class PCAM:
         self.stop()
         self.start()
 
+    def get_darkframe(self):
+        num_of_samples = 32
+
+        sum = np.zeros((self.w, self.h))
+
+        for i in range(num_of_samples):
+            sum = sum + self.fetch_buffer()
+
+        self.darkframe = sum/num_of_samples
+
     def fetch_buffer(self): #done
+        if self.cam.AcquisitionMode.GetValue() == PySpin.AcquisitionMode_SingleFrame:
+            self.restart()
         self.buffer = self.cam.GetNextImage()
         #print(self.buffer.GetTimeStamp())
-        self.raw_image = np.array(self.buffer.GetData(), dtype="uint64").reshape( (self.buffer.GetHeight(), self.buffer.GetWidth()) )
+        if (np.size(self.darkframe, 0) != self.buffer.GetWidth()):
+            print('no darkframe')
+            self.darkframe = np.zeros((self.buffer.GetHeight(), self.buffer.GetWidth()))
+        self.raw_image = np.array(self.buffer.GetData(), dtype="uint64").reshape( (self.buffer.GetHeight(), self.buffer.GetWidth()) ) - self.darkframe
+        self.raw_image = self.raw_image.clip(min = 0)
+        return self.raw_image
+
+    def fetch_avg(self, num = 8):
+        self.stop()
+        self.cam.AcquisitionMode.SetValue(PySpin.AcquisitionMode_Continuous)
+        self.start()
+        sum = np.zeros((self.w, self.h))
+
+        for i in range(num):
+            sum = sum + self.fetch_buffer()
+            self.queue_buffer()
+
+        self.raw_image = sum/num
+
         return self.raw_image
 
     def get_pol(self):  #done
@@ -139,4 +172,4 @@ class PCAM:
             self.buffer.Release()
             self.buffer = None
         except:
-            print('No Buffer!\n')
+            self.no_buffer_flag = True

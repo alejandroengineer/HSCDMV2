@@ -4,8 +4,8 @@ import AutoUtils as au
 import matplotlib.pyplot as plt
 import numpy as np
 
-phase1 = 0.21
-phase2 = 1.19 - 0.5
+phase1 = 0.28
+phase2 = phase1 + 0.1#1.19-0.7
 
 SLM2.init()
 
@@ -55,16 +55,16 @@ cam.fetch_buffer()
 H, V, D, A = cam.get_pol()
 
 fig.add_subplot(2, 2, 1)
-plt.imshow(np.abs(b_img))
+plt.imshow(np.absolute(b_img))
 
 fig.add_subplot(2, 2, 2)
-plt.imshow(np.abs(tmp))
+plt.imshow(cam.darkframe)
 
 fig.add_subplot(2, 2, 3)
-plt.imshow(np.abs(tmp2))
+plt.imshow(np.absolute(tmp2))
 
 fig.add_subplot(2, 2, 4)
-plt.imshow(A)
+plt.imshow(H)
 
 cam.queue_buffer()
 

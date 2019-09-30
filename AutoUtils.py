@@ -48,18 +48,47 @@ def automatic_exposure_and_framing(cam, size, target_exposure, exposure_toleranc
         cam.set_size(int(size), int(size))
         cam.set_offset(int(x), int(y))
 
-def automatic_phase_noQWP(cam, slm):
-    phase = 0
+def automatic_phase(cam, slm):
+    phase = 0.16
+    pphase = 0
+    b_mag = 1
 
-    slm.set_array(np.ones((64, 64))*np.exp(1.0j*phase))
-    slm.draw()
-    slm.swap_buffers()
+    slm.set_centered_size(slm.screen_width, slm.screen_height)
 
-    time.sleep(0.1)
+    for i in range(32):
+        slm.set_array(np.ones((64, 64))*np.exp(1.0j*np.pi*phase))
+        slm.draw()
+        slm.swap_buffers()
 
-    cam.fetch_buffer()
-    H, V, D, A = cam.get_pol()
-    value = np.sum(D)/np.sum(A)
+        time.sleep(0.025)
+
+        cam.fetch_avg()
+        H, V, D, A = cam.get_pol()
+        H, V, D, A = cam.get_pol()
+        center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
+        V_value = mu.circular_integral(V, center_x, center_y, 5)
+        H_value = mu.circular_integral(H, center_x, center_y, 5)/V_value
+        D_value = mu.circular_integral(D, center_x, center_y, 5)/V_value
+        A_value = mu.circular_integral(A, center_x, center_y, 5)/V_value
+        V_value = 1
+
+        HVtoDA = (H_value+V_value)/(D_value+A_value)
+
+        a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, np.pi*0.1)
+
+        deltab = np.absolute(b) - b_mag
+        deltap = phase - pphase
+
+        pphase = phase
+
+        phase = phase - (0.005*deltab/deltap)
+
+        b_mag = np.absolute(b)
+
+        print((b_mag, phase))
+
+    return phase
+
 
 def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.16*np.pi):
     slm.set_array(0.75*np.ones((64, 64)))
@@ -75,7 +104,21 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     num_regions_x = int(np.floor(slm2.screen_width/scan_size)+1)
     num_regions_y = int(np.floor(slm2.screen_height/scan_size)+1)
 
-    automatic_exposure_and_framing(cam, 800, 3200*16, 200*16)
+    automatic_exposure_and_framing(cam, 800, 3400*16, 200*16)
+
+    slm.set_array(0.0*np.ones((64, 64)))
+    slm.set_centered_size(size, size)
+    slm.draw()
+    slm.swap_buffers()
+
+    cam.get_darkframe()
+
+    slm.set_array(0.75*np.ones((64, 64)))
+    slm.set_centered_size(size, size)
+    slm.draw()
+    slm.swap_buffers()
+
+    phase_low = automatic_phase(cam, slm2)
 
     a_values = np.zeros((num_regions_x, num_regions_y), 'complex')
     b_values = np.zeros((num_regions_x, num_regions_y), 'complex')
@@ -83,42 +126,24 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     slm2.set_array(np.ones((64, 64))*np.exp(1.0j*phase))
 
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-
     for i in range(num_regions_x):
         for j in range(num_regions_y):
             slm2.set_location(i*scan_size, j*scan_size, scan_size, scan_size)
             slm2.draw()
             slm2.swap_buffers()
             time.sleep(0.025)
-            cam.fetch_buffer()
-            cam.queue_buffer()
-            cam.fetch_buffer()
-            cam.queue_buffer()
-            cam.fetch_buffer()
-            cam.queue_buffer()
-            cam.fetch_buffer()
-            cam.queue_buffer()
-            cam.fetch_buffer()
-            cam.queue_buffer()
-            cam.fetch_buffer()
+            cam.fetch_avg()
             H, V, D, A = cam.get_pol()
             center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
-            H_value = mu.circular_integral(H, center_x, center_y, 5)
             V_value = mu.circular_integral(V, center_x, center_y, 5)
-            D_value = mu.circular_integral(D, center_x, center_y, 5)
-            A_value = mu.circular_integral(A, center_x, center_y, 5)
+            H_value = mu.circular_integral(H, center_x, center_y, 5)/V_value
+            D_value = mu.circular_integral(D, center_x, center_y, 5)/V_value
+            A_value = mu.circular_integral(A, center_x, center_y, 5)/V_value
+            V_value = 1
 
-            a, b = mu.solveDM(H_value, V_value, D_value, A_value, phase - phase_low)
+            HVtoDA = (H_value+V_value)/(D_value+A_value)
+
+            a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, phase - phase_low)
 
             a_values[i][j] = a
             b_values[i][j] = b
@@ -138,7 +163,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     slm2.set_location_center(x, y, slm2_size*1.25, slm2_size*1.25)
     #slm2.set_location(0, 0, slm2.screen_width, slm2.screen_height)
 
-    region_size = 8
+    region_size = 4
     num_of_samples = region_size**2
 
     hadamard = mu.hadamard_masks(region_size)
@@ -151,39 +176,19 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
     cam.queue_buffer()
 
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-    cam.fetch_buffer()
-    cam.queue_buffer()
-
     for i in range(num_of_samples):
         slm2.set_array(np.exp(1.0j*(phase_low + (phase - phase_low)*np.reshape(hadamard[i], (region_size, region_size)))))
         slm2.disable_filter()
         slm2.draw()
         slm2.swap_buffers()
         time.sleep(0.025)
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
+        cam.fetch_avg()
         H, V, D, A = cam.get_pol()
-        H_value = mu.circular_integral(H, center_x, center_y, 4)
-        V_value = mu.circular_integral(V, center_x, center_y, 4)
-        D_value = mu.circular_integral(D, center_x, center_y, 4)
-        A_value = mu.circular_integral(A, center_x, center_y, 4)
+        V_value = mu.circular_integral(V, center_x, center_y, 5)
+        H_value = mu.circular_integral(H, center_x, center_y, 5)/V_value
+        D_value = mu.circular_integral(D, center_x, center_y, 5)/V_value
+        A_value = mu.circular_integral(A, center_x, center_y, 5)/V_value
+        V_value = 1
 
         D_value2 = D_value
 
@@ -198,25 +203,18 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
         slm2.draw()
         slm2.swap_buffers()
         time.sleep(0.025)
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
-        cam.queue_buffer()
-        cam.fetch_buffer()
+        cam.fetch_avg()
         H, V, D, A = cam.get_pol()
         center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
-        H_value = mu.circular_integral(H, center_x, center_y, 4)
-        V_value = mu.circular_integral(V, center_x, center_y, 4)
-        D_value = mu.circular_integral(D, center_x, center_y, 4)
-        A_value = mu.circular_integral(A, center_x, center_y, 4)
+        V_value = mu.circular_integral(V, center_x, center_y, 5)
+        H_value = mu.circular_integral(H, center_x, center_y, 5)/V_value
+        D_value = mu.circular_integral(D, center_x, center_y, 5)/V_value
+        A_value = mu.circular_integral(A, center_x, center_y, 5)/V_value
+        V_value = 1
 
         HVtoDA = (H_value+V_value)/(D_value+A_value)
+
+        print(HVtoDA)
 
         a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase - phase_low)
 
@@ -228,4 +226,4 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     final_img = np.reshape(np.matmul(hadamard_t, b_vector), (region_size, region_size))
 
-    return x, y, d_values, final_img, b_values
+    return x, y, d_values, final_img, b_magnitudes

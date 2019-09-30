@@ -1,5 +1,6 @@
 import numpy as np
 import math
+import sys
 
 def LG(nx, ny, waist = 20, mode = 1):
     out = np.zeros((nx, ny))
@@ -103,7 +104,7 @@ def inverse_sinc(y):    #calculates the inverse of sinc through the use of newto
 
     return x/np.pi
 
-def center_cam(cam, threshold = 0.1):
+def center_cam(cam, threshold = 0.4):
     cam2 = cam - threshold
     cam2 = cam2*(cam2 > 0)
     Nx = np.size(cam2, 0)
@@ -166,6 +167,10 @@ def solveDM(Ih, Iv, Id, Iu, alpha):
     a1 = Ih - Iv;
     a2 = Id - Iu;
     a3 = Ih+Iv+Id+Iu;
+
+    if -(4*a1**2 + 4*a2**2 - a3**2) < 0:
+        print('result is complex!')
+        a3 = a3 + 0.0000001
 
     br = (-(4*a1**2 + 4*a2**2 - a3**2)/(2*a1 + a3))**(1/2)/2 + (2*a1 + a3)**(1/2)/2
     gr = (2*a1 + a3)**(1/2)/2 - (-(4*a1**2 + 4*a2**2 - a3**2)/(2*a1 + a3))**(1/2)/2
