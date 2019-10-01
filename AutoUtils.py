@@ -48,14 +48,20 @@ def automatic_exposure_and_framing(cam, size, target_exposure, exposure_toleranc
         cam.set_size(int(size), int(size))
         cam.set_offset(int(x), int(y))
 
-def automatic_phase(cam, slm):
-    phase = 0.16
-    pphase = 0
+def automatic_phase(cam, slm, start = 0, end = 0.5, num_of_samples = 32, depth = 0):
+    max_depth = 2
+
+    if depth >= max_depth:
+        return np.pi*(start+end)/2
+
     b_mag = 1
 
     slm.set_centered_size(slm.screen_width, slm.screen_height)
 
-    for i in range(32):
+    b_values = []
+
+    for i in range(num_of_samples):
+        phase = start + (i*(end - start)/(num_of_samples - 1))
         slm.set_array(np.ones((64, 64))*np.exp(1.0j*np.pi*phase))
         slm.draw()
         slm.swap_buffers()
@@ -76,18 +82,21 @@ def automatic_phase(cam, slm):
 
         a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, np.pi*0.1)
 
-        deltab = np.absolute(b) - b_mag
-        deltap = phase - pphase
-
-        pphase = phase
-
-        phase = phase - (0.005*deltab/deltap)
-
         b_mag = np.absolute(b)
+
+        b_values.append(b_mag)
 
         print((b_mag, phase))
 
-    return phase
+    min_phase_loc = b_values.index(min(b_values))
+
+    best_phase = start + (min_phase_loc*(end - start)/(num_of_samples - 1))
+
+    print(best_phase)
+
+    span = (end - start)/num_of_samples
+
+    return automatic_phase(cam, slm, best_phase - 2*span, best_phase + 2*span, 64, depth+1)
 
 
 def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.16*np.pi):
@@ -120,6 +129,10 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     phase_low = automatic_phase(cam, slm2)
 
+    phase = phase + phase_low
+
+    slm2.set_zero(np.exp(1.0j*phase_low))
+
     a_values = np.zeros((num_regions_x, num_regions_y), 'complex')
     b_values = np.zeros((num_regions_x, num_regions_y), 'complex')
     d_values = np.zeros((num_regions_x, num_regions_y))
@@ -143,7 +156,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
             HVtoDA = (H_value+V_value)/(D_value+A_value)
 
-            a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, phase - phase_low)
+            a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, phase)
 
             a_values[i][j] = a
             b_values[i][j] = b
@@ -163,7 +176,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     slm2.set_location_center(x, y, slm2_size*1.25, slm2_size*1.25)
     #slm2.set_location(0, 0, slm2.screen_width, slm2.screen_height)
 
-    region_size = 4
+    region_size = 8
     num_of_samples = region_size**2
 
     hadamard = mu.hadamard_masks(region_size)
@@ -177,7 +190,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     cam.queue_buffer()
 
     for i in range(num_of_samples):
-        slm2.set_array(np.exp(1.0j*(phase_low + (phase - phase_low)*np.reshape(hadamard[i], (region_size, region_size)))))
+        slm2.set_array(np.exp(1.0j*(phase_low + phase*np.reshape(hadamard[i], (region_size, region_size)))))
         slm2.disable_filter()
         slm2.draw()
         slm2.swap_buffers()
@@ -196,9 +209,9 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         HVtoDA = (H_value+V_value)/(D_value+A_value)
 
-        a1, b1 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase - phase_low)
+        a1, b1 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase)
 
-        slm2.set_array(np.exp(1.0j*(phase_low + (phase - phase_low)*np.reshape(1.0 - hadamard[i], (region_size, region_size)))))
+        slm2.set_array(np.exp(1.0j*(phase_low + phase*np.reshape(1.0 - hadamard[i], (region_size, region_size)))))
         slm2.disable_filter()
         slm2.draw()
         slm2.swap_buffers()
@@ -216,7 +229,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         print(HVtoDA)
 
-        a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase - phase_low)
+        a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, phase)
 
         b_vector[i] = b1 - b2
 
@@ -226,4 +239,4 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
     final_img = np.reshape(np.matmul(hadamard_t, b_vector), (region_size, region_size))
 
-    return x, y, d_values, final_img, b_magnitudes
+    return x, y, d_values, final_img, b_magnitudes, phase_low

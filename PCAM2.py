@@ -53,12 +53,14 @@ class PCAM:
             node_pixel_format_ = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName(format))
             pixel_format_ = node_pixel_format_.GetValue()
             node_pixel_format.SetIntValue(pixel_format_)
+            self.cam.AdcBitDepth.SetIntValue(2)
             self.start()
         else:
             node_pixel_format = PySpin.CEnumerationPtr(self.nodemap.GetNode("PixelFormat"))
             node_pixel_format_ = PySpin.CEnumEntryPtr(node_pixel_format.GetEntryByName(format))
             pixel_format_ = node_pixel_format_.GetValue()
             node_pixel_format.SetIntValue(pixel_format_)
+            self.cam.AdcBitDepth.SetIntValue(2)
 
     def set_size(self, w, h): #done
         self.w = w
@@ -95,6 +97,8 @@ class PCAM:
             self.cam.ExposureTime.SetValue(exposure)
             self.start()
         else:
+            self.cam.GainAuto.SetIntValue(0)
+            self.cam.Gain.SetValue(0)
             self.cam.ExposureAuto.SetIntValue(0)
             self.cam.ExposureMode.SetIntValue(1)
             self.cam.ExposureTime.SetValue(exposure)
@@ -112,14 +116,30 @@ class PCAM:
         self.start()
 
     def get_darkframe(self):
-        num_of_samples = 32
+        num_of_samples = 64
 
         sum = np.zeros((self.w, self.h))
 
-        for i in range(num_of_samples):
-            sum = sum + self.fetch_buffer()
+        images = []
 
-        self.darkframe = sum/num_of_samples
+        for i in range(num_of_samples):
+            images.append(self.fetch_buffer())
+            sum = sum + images[i]
+
+        avg = sum/num_of_samples
+
+        self.darkframe = avg
+
+        rms = np.zeros((self.w, self.h))
+
+        for i in range(num_of_samples):
+            rms = rms + np.square(images[i] - avg)
+
+        rms = np.sqrt(rms/num_of_samples)
+
+        print((np.average(rms), np.average(avg)))
+
+
 
     def fetch_buffer(self): #done
         if self.cam.AcquisitionMode.GetValue() == PySpin.AcquisitionMode_SingleFrame:
@@ -161,8 +181,8 @@ class PCAM:
         data_2_2d = np.reshape(data_2, (h, int(w/2)))
 
         self.Di = data_1_2d[0::2, :].astype(float)
-        self.Vi = data_1_2d[1::2, :].astype(float)
-        self.Hi = data_2_2d[0::2, :].astype(float)
+        self.Hi = data_1_2d[1::2, :].astype(float)
+        self.Vi = data_2_2d[0::2, :].astype(float)
         self.Ai = data_2_2d[1::2, :].astype(float)
         
         return self.Hi, self.Vi, self.Di, self.Ai

@@ -1,11 +1,18 @@
 import PCAM2
 import SLM2
+
 import AutoUtils as au
+import MathUtils as mu
+
 import matplotlib.pyplot as plt
 import numpy as np
 
+import glfw
+
+from pyglfw.libapi import *
+
 phase1 = 0.28
-phase2 = phase1 + 0.1#1.19-0.7
+phase2 = 0.2#phase1 + 0.5#1.19-0.7
 
 SLM2.init()
 
@@ -47,26 +54,61 @@ slm.swap_buffers()
 
 #au.automatic_exposure_and_framing(cam, 400, 3400, 200)
 
-x, y, tmp, b_img, tmp2 = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2, np.pi*phase1)
+x, y, tmp, b_img, tmp2, phase_low = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2, np.pi*phase1)
 
-fig=plt.figure(figsize=(2, 2))
+fig=plt.figure(figsize=(3, 2))
 
-cam.fetch_buffer()
-H, V, D, A = cam.get_pol()
+slm_phase = 0;
 
-fig.add_subplot(2, 2, 1)
-plt.imshow(np.absolute(b_img))
 
-fig.add_subplot(2, 2, 2)
-plt.imshow(cam.darkframe)
+while not glfw.window_should_close(slm.window):
+    state = glfw.get_mouse_button(slm.window, glfw.MOUSE_BUTTON_LEFT)
 
-fig.add_subplot(2, 2, 3)
-plt.imshow(np.absolute(tmp2))
+    if state == glfw.PRESS:
+        slm_phase = 1.0 - slm_phase
+        slm2.set_array(np.ones((64, 64))*np.exp(1.0j*(phase_low + 0.5*slm_phase)))
+        slm2.draw()
+        slm2.swap_buffers()
 
-fig.add_subplot(2, 2, 4)
-plt.imshow(H)
+    cam.fetch_avg()
+    H, V, D, A = cam.get_pol()
 
-cam.queue_buffer()
+    fig.add_subplot(3, 2, 1)
+    plt.imshow(np.absolute(b_img))
+
+    fig.add_subplot(3, 2, 2)
+    plt.imshow(np.absolute(tmp2))
+
+    fig.add_subplot(3, 2, 3)
+    plt.imshow(np.angle(b_img))
+
+    fig.add_subplot(3, 2, 4)
+    plt.imshow(V)
+
+    fig.add_subplot(3, 2, 5)
+    plt.imshow(D)
+
+    fig.add_subplot(3, 2, 6)
+    plt.imshow(A)
+
+    center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
+    V_value = mu.circular_integral(V, center_x, center_y, 5)
+    H_value = mu.circular_integral(H, center_x, center_y, 5)/V_value
+    D_value = mu.circular_integral(D, center_x, center_y, 5)/V_value
+    A_value = mu.circular_integral(A, center_x, center_y, 5)/V_value
+    V_value = 1
+
+    HVtoDA = (H_value+V_value)/(D_value+A_value)
+
+    a2, b2 = mu.solveDM(H_value, V_value, D_value*HVtoDA, A_value*HVtoDA, np.pi*0.5)
+
+    print((HVtoDA, np.absolute(b2)))
+
+    cam.queue_buffer()
+
+    plt.pause(0.05)
+
+    glfw.poll_events()
 
 cam.__del__()
 
