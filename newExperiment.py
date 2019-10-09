@@ -2,14 +2,26 @@ import numpy as np
 
 import glfw
 
+from PIL import Image, ImageFilter
+
+import scipy.io as sp
+
 import PCAM2 as PC
 import SLM2 as SLM
 
 import AutoUtils as au
 import MathUtils as mu
 
-phase1 = 0.21   #zero phase constant
-phase2 = 1.19   #pi phase constant
+Nx = 32
+Ny = 32
+Num_of_meas = Nx*Ny
+
+activation_ratio = 0.25
+
+phase_rot = 0.5*np.pi  #phase rotation amount
+
+masks = np.zeros((Num_of_meas, Nx*Ny))
+b_vector = np.zeros(Num_of_meas, dtype=complex)
 
 cam = PC.PCAM()  #start camera
 cam.start()
@@ -28,19 +40,36 @@ slm2.enable_blazed()#enable blazed grating shader on the mask slm
 slm2.set_k_vector(0, 0) #set blazed grating to flat on the mask slm to utilized the slm calibration 
 slm2.disable_filter()
 
-slm2.set_zero(np.exp(1.0j*np.pi*phase1))    #set mask slm background image
-
 slm2.load_calibration('D:\Alejandro\slm cals\H4_cal.mat')   #load mask slm calibration
 
+#set zernike correction for object plane slm
+slm1.set_zernike_coeffs([0, 2.07, 4, -0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 0, 0, 0], [1])
+
 #generate phase and amplitude object for slm1
+im = Image.open("zernike_4_2.png")#"zernike_9_5_512.png")#"logo_ramps_512.png")#USFGrayScale.png")#"Star.png")#"logo_radial_ramp_512.png")#"abc.png")
+#im = im.filter(ImageFilter.BLUR)
+np_im = np.array(im)
+
+phase_image = 2.0*np.pi*np_im[:, :]/255.0
+
+pimg = np.exp(1.0j*phase_image)
+
 x = np.linspace(-1, 1, 128*4)
 y = np.linspace(-1, 1, 128*4)
 xx, yy = np.meshgrid(x, y)
 
 dist = np.sqrt((xx**2) + (yy**2))
-img = dist < 1
+imgx = abs(xx) < 1
+imgy = abs(yy) < 1
+#img = dist < 0.95
+img = imgx*imgy#phase_image > 0.01#
 
-slm1.set_array(img.astype(float))    #set object slm to display our object
+#find image center on mask slm and zero state phase
+x, y, b_img, phase_low = au.automatic_slm_center(cam, slm1, slm2, slm1.screen_height, 9.5/20, phase_rot)
+
+slm2_size = 1.25*slm1.screen_height*9.5/20
+
+slm1.set_array(0.5*img.astype(float)*pimg)    #set object slm to display our object
 
 #set object location and size in slm2
 min_size = min(slm1.screen_height, slm1.screen_width)
@@ -49,27 +78,41 @@ slm1.set_location_center(slm1.screen_width/2, slm1.screen_height/2, min_size, mi
 slm1.draw()         #display the object we are going to image
 slm1.swap_buffers()
 
-#display the zero phase image on slm2
-slm2.set_location(0, 0, 0, 0)
+#reset slm2 display for autoexposure
+slm2.set_array(np.ones((16, 16))*np.exp(1.0j*phase_low))
 slm2.draw()
 slm2.swap_buffers()
 
 #perform automatic exposure and framing of the DC spot
-au.automatic_exposure_and_framing(cam, 600, 3400*16, 200*16)
+au.automatic_exposure_and_framing(cam, 600, 3100*16, 200*16)
 
+cam.fetch_avg()
 
-while not glfw.window_should_close(slm1.window):
-    cam.fetch_buffer()
-    H, V, D, A = cam.get_pol()
-    center_x, center_y = mu.center_cam(V)
-    cam.queue_buffer()
-    H_sum = mu.circular_integral_fast(H, center_x, center_y, 10)
-    V_sum = mu.circular_integral_fast(V, center_x, center_y, 10)
-    D_sum = mu.circular_integral_fast(D, center_x, center_y, 10)
-    A_sum = mu.circular_integral_fast(A, center_x, center_y, 10)
+H, V, D, A = cam.get_pol()
 
-    print((H_sum/V_sum, D_sum/A_sum, H_sum/D_sum))
-    glfw.poll_events()
+center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
+
+for n in range(Num_of_meas):
+    print(n)
+
+    mask = np.random.choice([0.0, 1.0], size = (Nx, Ny), p=[(1.0 - activation_ratio), activation_ratio])
+
+    mask_1d = np.reshape(mask, (1, Nx*Ny))
+
+    masks[n, :] = mask_1d
+
+    a, b = au.measure(cam, slm2, phase_low, phase_rot, mask)#, (center_x, center_y))
+
+    b_vector[n] = b
+
+sp.savemat('D:/Alejandro/results/data_191007_run21.mat', {
+    'b': b_vector,
+    'masks': masks,
+    'Nx': Nx,
+    'Ny': Ny,
+    'alpha': phase_rot,
+    'activation': activation_ratio
+    })
 
 cam.stop()
 

@@ -1,3 +1,5 @@
+from scipy import ndimage, misc
+
 import numpy as np
 import math
 import sys
@@ -120,6 +122,10 @@ def center_cam(cam, threshold = 0.4):
     x = np.sum(np.sum(xx*cam2))/sum
     y = np.sum(np.sum(yy*cam2))/sum
 
+    ind = np.unravel_index(np.argmax(cam, axis=None), cam.shape)
+    x = ind[0]
+    y = ind[1]
+
     return x, y
 
 def circular_integral_fast(input_, cx_, cy_, r):
@@ -241,4 +247,11 @@ def hadamard_masks(size):   #returns a hadamard matrix for square image of width
         i_ = swap_even_odd_bits(bit_reverse(i, logN))
         for j in range(N):
             out[i, j] = hadamard_element(i, j, logN)#stripe_bits(j, logN>>1)
+    return out
+
+def diamond(size):
+    out = np.ones((int((size+2)/np.sqrt(2)), int((size+2)/np.sqrt(2))))
+
+    out = ndimage.rotate(out, 45, reshape=True)
+
     return out
