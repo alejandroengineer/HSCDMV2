@@ -54,7 +54,9 @@ slm.swap_buffers()
 
 #au.automatic_exposure_and_framing(cam, 400, 3400, 200)
 
-x, y, b_img, phase_low, b_mag = au.automatic_slm_center2(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2, np.pi*phase1)
+#x, y, b_img, phase_low, b_mag = au.automatic_slm_center2(cam, slm, slm2, slm.screen_height, 9.5/20, np.pi*phase2, np.pi*phase1)
+
+x, y, phase_low = au.automatic_slm_center(cam, slm, slm2, slm.screen_height, 9.5/20, 0.5*np.pi)
 
 fig=plt.figure(figsize=(3, 2))
 
@@ -73,11 +75,11 @@ while not glfw.window_should_close(slm.window):
     cam.fetch_avg()
     H, V, D, A = cam.get_pol()
 
-    fig.add_subplot(3, 2, 1)
-    plt.imshow(np.absolute(b_img))
+    # fig.add_subplot(3, 2, 1)
+    # plt.imshow(np.absolute(b_img))
 
-    fig.add_subplot(3, 2, 2)
-    plt.imshow(np.angle(b_img))
+    # fig.add_subplot(3, 2, 2)
+    # plt.imshow(np.angle(b_img))
 
     fig.add_subplot(3, 2, 3)
     plt.imshow(V)
@@ -88,8 +90,8 @@ while not glfw.window_should_close(slm.window):
     fig.add_subplot(3, 2, 5)
     plt.imshow(A)
 
-    fig.add_subplot(3, 2, 6)
-    plt.imshow(b_mag)
+    # fig.add_subplot(3, 2, 6)
+    # plt.imshow(b_mag)
 
     center_x, center_y = mu.center_cam(V, np.max(V)*0.7)
     V_value = mu.circular_integral(V, center_x, center_y, 5)

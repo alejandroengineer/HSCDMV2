@@ -5,6 +5,7 @@ import glfw
 from PIL import Image, ImageFilter
 
 import scipy.io as sp
+import os
 
 import PCAM2 as PC
 import SLM2 as SLM
@@ -12,7 +13,7 @@ import SLM2 as SLM
 import AutoUtils as au
 import MathUtils as mu
 
-def directMeasurement(cam, slm1, slm2, Nx, Ny, activation_ratio, phase_rot_, phase_height, circular, img_file_name):
+def directMeasurement(cam, slm1, slm2, Nx, Ny, activation_ratio, phase_rot_, phase_height, circular, img_file_name, id):
     Num_of_meas = Nx*Ny
 
     masks = np.zeros((Num_of_meas, Nx*Ny))
@@ -78,7 +79,10 @@ def directMeasurement(cam, slm1, slm2, Nx, Ny, activation_ratio, phase_rot_, pha
 
         b_vector[n] = b
 
-    sp.savemat('D:/Alejandro/results/sweeps/' + img_file_name + '/test/ar-' + str(activation_ratio) + 'pr-' + str(phase_rot_) + '.mat', {
+    if not os.path.isdir('D:/Alejandro/results/sweeps/' + id + '/' + img_file_name):
+        os.mkdir('D:/Alejandro/results/sweeps/' + id + '/' + img_file_name)
+
+    sp.savemat('D:/Alejandro/results/sweeps/' + id + '/' + img_file_name + '/ar-' + str(activation_ratio) + 'pr-' + str(phase_rot_) + '.mat', {
         'b': b_vector,
         'masks': masks,
         'Nx': Nx,

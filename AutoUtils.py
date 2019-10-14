@@ -4,6 +4,9 @@ import SLM2
 import PCAM
 import MathUtils as mu
 
+import scipy.io as sp
+import os
+
 def automatic_exposure(cam, target_exposure, exposure_tolerance):
     good_exposure = False
     while good_exposure == False:
@@ -131,7 +134,7 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
     slm2.set_zero(np.exp(1.0j*phase_low))
 
     a_values = np.zeros((num_regions_x, 1), 'complex')
-    b_values = np.zeros((num_regions_x, 1), 'complex')
+    b_values = np.zeros((num_regions_y, 1), 'complex')
 
     slm2.set_array(np.ones((64, 64))*np.exp(1.0j*(phase_low+phase)))
 
@@ -153,16 +156,15 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, phase)
 
-        a_values[i][0] = a
-        b_values[i][0] = b
+        a_values[i][0] = b
 
         cam.queue_buffer()
 
-    b_magnitudes = np.absolute(b_values)
-    max_b_value = np.max(b_magnitudes)
-    x, y = mu.center_cam(b_magnitudes, max_b_value*0.2)
+    a_magnitudes = np.absolute(a_values)
+    max_a_value = np.max(a_magnitudes)
+    x_x, y = mu.center_cam_weighted(a_magnitudes, max_a_value*0.2)
 
-    x_out = (x+0.5)*scan_size
+    x_out = (x_x+0.5)*scan_size
 
     for i in range(num_regions_y):
         slm2.set_location(0, i*scan_size, slm2.screen_width, scan_size)
@@ -182,16 +184,25 @@ def automatic_slm_center(cam, slm, slm2, size, size_ratio, phase, phase_low = 0.
 
         a, b = mu.solveDM(H_value, V_value, HVtoDA*D_value, HVtoDA*A_value, phase)
 
-        a_values[i][0] = a
         b_values[i][0] = b
 
         cam.queue_buffer()
 
     b_magnitudes = np.absolute(b_values)
     max_b_value = np.max(b_magnitudes)
-    x, y = mu.center_cam(b_magnitudes, max_b_value*0.2)
+    x_y, y = mu.center_cam_weighted(b_magnitudes, max_b_value*0.2)
 
-    y_out = (x+0.5)*scan_size
+    y_out = (x_y+0.5)*scan_size
+    if not os.path.isdir('D:/Alejandro/centerTest/'):
+        os.mkdir('D:/Alejandro/centerTest/')
+
+    sp.savemat('D:/Alejandro/centerTest/center.mat', {
+        'a' : a_values,
+        'b' : b_values,
+        'ss' : scan_size,
+        'width' : slm2.screen_width,
+        'height' : slm2.screen_height
+        })
 
     print((x_out, y_out))
 
@@ -339,7 +350,7 @@ def automatic_slm_center2(cam, slm, slm2, size, size_ratio, phase, phase_low = 0
 
     return x, y, final_img, phase_low
 
-def measure(cam, slm, phase_low, phase, mask, center = None, take_dual = True):
+def measure(cam, slm, phase_low, phase, mask, center = None, take_dual = False):
     slm.set_array(np.exp(1.0j*(phase_low + phase*mask)))
     slm.disable_filter()
     slm.draw()

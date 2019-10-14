@@ -128,6 +128,24 @@ def center_cam(cam, threshold = 0.4):
 
     return x, y
 
+def center_cam_weighted(cam, threshold = 0.4):
+    cam2 = cam - threshold
+    cam2 = cam2*(cam2 > 0)
+    Nx = np.size(cam2, 0)
+    Ny = np.size(cam2, 1)
+
+    x = np.linspace(0, Nx-1, Nx)
+    y = np.linspace(0, Ny-1, Ny)
+
+    yy, xx = np.meshgrid(y, x)
+
+    sum = np.sum(np.sum(cam2))
+
+    x = np.sum(np.sum(xx*cam2))/sum
+    y = np.sum(np.sum(yy*cam2))/sum
+
+    return x, y
+
 def circular_integral_fast(input_, cx_, cy_, r):
     cx_f = np.floor(cx_)
     cy_f = np.floor(cy_)

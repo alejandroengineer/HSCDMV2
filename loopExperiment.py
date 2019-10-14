@@ -14,12 +14,19 @@ import MathUtils as mu
 
 import directMeasurement as dm
 
-Nx = 32
-Ny = 32
+Nx = 64
+Ny = 64
 
-files = ['Star', 'USFGrayScale', 'logo_radial_ramp_512', 'logo_ramps_512', 'zernike_4_2']
-phase_height = [np.pi, 1.5*np.pi, 1.5*np.pi, 1.5*np.pi, 2*np.pi]
-circular = [True, False, False, False, True]
+id = '20191014'
+
+# files = ['Star', 'USFGrayScale', 'logo_radial_ramp_512', 'logo_ramps_512', 'zernike_4_2']
+# phase_height = [np.pi, 1.5*np.pi, 1.5*np.pi, 1.5*np.pi, 2*np.pi]
+# circular = [True, False, False, False, True]
+
+files = ['spiral_phase_OMA1', 'spiral_phase_OMA2', 'spiral_phase_OMA3', 'logo_radial_ramp_512', 'zernike_4_2']
+phase_height = [2*np.pi, 2*np.pi, 2*np.pi, 2*np.pi, 2*np.pi]
+circular = [True, True, True, False, True]
+
 phase_rots = [0.1, 0.2, 0.5, 0.75, 1]
 act_rats = [0.05, 0.1, 0.25, 0.5, 0.75]
 
@@ -48,7 +55,7 @@ slm1.set_zernike_coeffs([0, 2.07, 4, -0.025, 0, 0, -.04, 0.1055, 0.1055, -0.04, 
 for n in range(len(files)):
     for phase_rot in phase_rots:
         for act_rat in act_rats:
-            dm.directMeasurement(cam, slm1, slm2, Nx, Ny, act_rat, phase_rot, phase_height[n], circular[n], files[n])
+            dm.directMeasurement(cam, slm1, slm2, Nx, Ny, act_rat, phase_rot, phase_height[n], circular[n], files[n], id)
 
 cam.stop()
 
